@@ -1,0 +1,26 @@
+# ==============================
+# ComunIA - Dependencias Python
+# ==============================
+
+# Backend / API REST
+fastapi
+uvicorn[standard]
+
+# Validación y configuración type-safe
+pydantic
+pydantic-settings
+python-dotenv
+
+# Comunicación HTTP con proveedores LLM
+httpx
+
+# Reintentos y backoff ante errores/rate limits
+tenacity
+
+# Dashboard
+streamlit
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
