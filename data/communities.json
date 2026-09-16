@@ -1,0 +1,34 @@
+[
+  {
+    "id": "COM-001",
+    "name": "Avenida Pablo Neruda 11"
+  },
+  {
+    "id": "COM-002",
+    "name": "Avenida Pablo Neruda 14"
+  },
+  {
+    "id": "COM-003",
+    "name": "Calle Rafael Fernandez Hijicos 10"
+  },
+  {
+    "id": "COM-004",
+    "name": "Calle Labranza 2"
+  },
+  {
+    "id": "COM-005",
+    "name": "Calle Los Andaluces 4"
+  },
+  {
+    "id": "COM-006",
+    "name": "Calle Arenas de Iguña 1"
+  },
+  {
+    "id": "COM-007",
+    "name": "Calle Santiago Alió 14"
+  },
+  {
+    "id": "COM-008",
+    "name": "Avenida de la Democracia 110"
+  }
+]

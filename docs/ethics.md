@@ -1,0 +1,39 @@
+# Ética, privacidad y gobernanza del dato
+
+## Supervisión humana
+
+ComunIA es una herramienta de apoyo. La clasificación inicial queda en estado
+`pending` hasta que una persona la aprueba o corrige.
+
+## Minimización de datos
+
+Nombre, teléfono, vivienda y comunidad se recogen porque permiten identificar
+el origen del reporte y evitar comunicaciones anónimas o imposibles de verificar.
+
+Sin embargo, estos datos no son necesarios para calcular la urgencia y por ello
+no se incluyen en el prompt enviado al LLM. El modelo recibe únicamente la
+descripción de la incidencia.
+
+## Sesgos
+
+El prompt obliga a ignorar género, raza, origen, nacionalidad, nivel
+socioeconómico, barrio y ubicación inferida al determinar la prioridad.
+
+La dirección se usa para identificar la comunidad administrada, no para elevar
+o reducir la gravedad.
+
+## Proveedor externo
+
+El proveedor externo supone una transferencia del texto de la incidencia fuera
+del equipo local. Antes de un uso real deben revisarse las obligaciones de
+protección de datos, contratos con proveedores y política de conservación.
+
+El prototipo configura las llamadas externas sin almacenamiento de la respuesta
+cuando el proveedor permite esa opción.
+
+## Limitaciones
+
+- Un LLM puede clasificar incorrectamente aunque el JSON sea válido.
+- Los guardrails cubren únicamente un conjunto limitado de riesgos explícitos.
+- El fuzzy matching debe revisarse al ampliar mucho el catálogo de comunidades.
+- El sistema no sustituye protocolos de emergencia ni decisiones profesionales.

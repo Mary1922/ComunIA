@@ -1,8 +1,7 @@
-cat > .gitignore << 'EOF'
 # Variables de entorno y secretos
 .env
 
-# Entorno virtual
+# Entornos virtuales
 .venv/
 venv/
 
@@ -12,10 +11,8 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Pytest
+# Pytest / coverage
 .pytest_cache/
-
-# Coverage
 .coverage
 htmlcov/
 
@@ -28,4 +25,3 @@ htmlcov/
 # Sistema operativo
 .DS_Store
 Thumbs.db
-EOF
