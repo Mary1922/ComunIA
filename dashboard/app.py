@@ -1,5 +1,8 @@
 """Dashboard Streamlit de ComunIA."""
 
+from collections import defaultdict
+from datetime import datetime
+from html import escape
 from pathlib import Path
 import os
 import sys
@@ -22,6 +25,7 @@ API_BASE_URL = os.getenv(
     "COMUNIA_API_URL",
     "http://localhost:8000/api/v1",
 ).rstrip("/")
+ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 
 
 st.set_page_config(
@@ -29,12 +33,6 @@ st.set_page_config(
     page_icon="🏢",
     layout="wide",
 )
-
-st.title("🏢 ComunIA")
-st.caption(
-    "Triaje asistido por IA para comunicaciones de comunidades de propietarios"
-)
-
 
 PROVIDER_LABELS = {
     "ollama": "Ollama · Local",
@@ -52,6 +50,112 @@ PREFERENCE_LABELS = {
     "groq": "Groq ofrece el mejor resultado",
     "neither": "Ninguno de los dos es satisfactorio",
 }
+
+
+PRIORITY_LABELS = {
+    "critical": "Crítica",
+    "high": "Alta",
+    "medium": "Media",
+    "low": "Baja",
+}
+
+CATEGORY_LABELS = {
+    "ascensores": "Ascensores",
+    "fontaneria": "Fontanería",
+    "danos_agua": "Daños de agua",
+    "electricidad": "Electricidad",
+    "antena_tv": "Antena de TV",
+    "portero_automatico": "Portero automático",
+    "plagas": "Plagas",
+    "jardin": "Jardín",
+    "piscina": "Piscina",
+    "seguridad": "Seguridad",
+    "limpieza": "Limpieza",
+    "zonas_comunes": "Zonas comunes",
+    "garaje": "Garaje",
+    "convivencia": "Convivencia",
+    "administracion": "Administración",
+    "contabilidad": "Contabilidad",
+    "obras": "Obras",
+    "otros": "Otros",
+}
+
+AREA_LABELS = {
+    "mantenimiento": "Mantenimiento",
+    "gestion_comunidad": "Gestión de comunidad",
+}
+
+STATUS_LABELS = {
+    "pending": "Pendiente de revisión",
+    "approved": "Aprobada",
+    "corrected": "Corregida",
+}
+
+CHANNEL_LABELS = {
+    "email": "Correo electrónico",
+    "whatsapp": "WhatsApp",
+    "phone": "Teléfono",
+}
+
+
+def load_custom_css() -> None:
+    """Carga el sistema visual del dashboard desde un CSS independiente."""
+
+    css_path = ASSETS_DIR / "style.css"
+    if not css_path.exists():
+        return
+
+    st.markdown(
+        f"<style>{css_path.read_text(encoding='utf-8')}</style>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_hero() -> None:
+    """Cabecera de producto: identidad, propósito y pilares técnicos."""
+
+    st.markdown(
+        """
+        <section class="comunia-hero">
+            <div class="hero-kicker">🌿 IA aplicada a la gestión residencial</div>
+            <h1 class="hero-title">Comun<span class="accent">IA</span></h1>
+            <p class="hero-subtitle">
+                Motor inteligente de triaje para comunidades de propietarios.
+                Clasifica incidencias, compara modelos y mantiene la decisión
+                final bajo supervisión humana.
+            </p>
+            <div class="hero-tags">
+                <span class="hero-tag">🛡️ API Type-Safe</span>
+                <span class="hero-tag">🖥️ Ollama local</span>
+                <span class="hero-tag">☁️ Groq externo</span>
+                <span class="hero-tag">👤 Human-in-the-loop</span>
+                <span class="hero-tag">📊 Calidad medible</span>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_section_header(icon: str, title: str, subtitle: str) -> None:
+    """Cabecera consistente para cada bloque funcional del dashboard."""
+
+    st.markdown(
+        f"""
+        <div class="section-heading">
+            <div class="section-icon">{icon}</div>
+            <div class="section-copy">
+                <h2>{title}</h2>
+                <p>{subtitle}</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+load_custom_css()
+render_hero()
 
 
 def api_request(
@@ -138,17 +242,149 @@ def format_percentage(value: float | None) -> str:
     return f"{value:.1f}%"
 
 
+def priority_label(value: str) -> str:
+    return PRIORITY_LABELS.get(value, value)
+
+
+def category_label(value: str) -> str:
+    return CATEGORY_LABELS.get(value, value.replace("_", " ").title())
+
+
+def area_label(value: str) -> str:
+    return AREA_LABELS.get(value, value.replace("_", " ").title())
+
+
+def status_label(value: str) -> str:
+    return STATUS_LABELS.get(value, value)
+
+
+def format_received_at(value: str) -> str:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return parsed.strftime("%d/%m/%Y · %H:%M")
+    except (TypeError, ValueError):
+        return value
+
+
+def build_public_incident_references(incidents: list[dict]) -> dict[str, str]:
+    """Genera referencias legibles sin sustituir el UUID interno.
+
+    La numeración es cronológica e independiente por año. Como ComunIA no
+    elimina incidencias desde el dashboard, la referencia permanece estable
+    durante el uso normal del prototipo.
+    """
+
+    counters: defaultdict[int, int] = defaultdict(int)
+    references: dict[str, str] = {}
+
+    ordered = sorted(
+        incidents,
+        key=lambda item: item.get("incident", {}).get("received_at", ""),
+    )
+
+    for item in ordered:
+        received_at = item.get("incident", {}).get("received_at", "")
+        try:
+            year = datetime.fromisoformat(
+                received_at.replace("Z", "+00:00")
+            ).year
+        except (TypeError, ValueError):
+            year = datetime.now().year
+
+        counters[year] += 1
+        references[item["incident_id"]] = (
+            f"Incidencia {counters[year]}-{year}"
+        )
+
+    return references
+
+
+def build_public_comparison_references(
+    comparisons: list[dict],
+) -> dict[str, str]:
+    """Genera referencias legibles para comparaciones sin exponer el UUID."""
+
+    counters: defaultdict[int, int] = defaultdict(int)
+    references: dict[str, str] = {}
+
+    ordered = sorted(
+        comparisons,
+        key=lambda item: item.get("incident", {}).get("received_at", ""),
+    )
+
+    for item in ordered:
+        received_at = item.get("incident", {}).get("received_at", "")
+        try:
+            year = datetime.fromisoformat(
+                received_at.replace("Z", "+00:00")
+            ).year
+        except (TypeError, ValueError):
+            year = datetime.now().year
+
+        counters[year] += 1
+        references[item["incident_id"]] = (
+            f"Comparación {counters[year]}-{year}"
+        )
+
+    return references
+
+
+def render_summary_box(summary: str) -> None:
+    st.markdown(
+        f"""
+        <div class="summary-card">
+            <div class="summary-icon">📝</div>
+            <div>
+                <div class="summary-label">Resumen ejecutivo</div>
+                <div class="summary-text">{escape(summary)}</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_classification(classification: dict) -> None:
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Prioridad", classification["priority"].upper())
-    col2.metric("Categoría", classification["category"])
-    col3.metric("Área", classification["department"])
+    priority = classification["priority"]
+    visible_priority = priority_label(priority)
+    visible_category = category_label(classification["category"])
+    visible_area = area_label(classification["department"])
 
-    st.markdown("**Resumen**")
-    st.write(classification["summary"])
+    st.markdown(
+        f"""
+        <div class="classification-strip">
+            <span class="status-pill priority-{priority}">⚠️ {visible_priority}</span>
+            <span class="classification-pill">🧩 {visible_category}</span>
+            <span class="classification-pill">🛠️ {visible_area}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("**Justificación auditable**")
-    st.write(classification["reasoning"])
+    st.markdown(
+        f"""
+        <div class="classification-grid">
+            <div class="classification-card">
+                <div class="classification-card-label">Prioridad</div>
+                <div class="classification-card-value">{escape(visible_priority)}</div>
+            </div>
+            <div class="classification-card">
+                <div class="classification-card-label">Categoría</div>
+                <div class="classification-card-value">{escape(visible_category)}</div>
+            </div>
+            <div class="classification-card">
+                <div class="classification-card-label">Área</div>
+                <div class="classification-card-value">{escape(visible_area)}</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    render_summary_box(classification["summary"])
+
+    with st.expander("🧠 Ver justificación auditable", expanded=True):
+        st.write(classification["reasoning"])
 
 
 def render_metrics(metrics: dict) -> None:
@@ -172,30 +408,44 @@ def render_metrics(metrics: dict) -> None:
 
 
 def render_provider_comparison_card(provider_result: dict) -> None:
-    """Tarjeta compacta para evitar métricas cortadas en columnas estrechas."""
+    """Tarjeta visual de proveedor con clasificación y rendimiento."""
 
     metrics = provider_result["metrics"]
     classification = provider_result["classification"]
     provider = metrics["provider"]
+    chip_class = "local" if provider == "ollama" else "external"
+    priority = classification["priority"]
 
     with st.container(border=True):
         st.markdown(
-            f"### {PROVIDER_ICONS.get(provider, '🤖')} "
-            f"{PROVIDER_LABELS.get(provider, provider.upper())}"
+            f"""
+            <span class="provider-chip {chip_class}">
+                {PROVIDER_ICONS.get(provider, '🤖')}
+                {PROVIDER_LABELS.get(provider, provider.upper())}
+            </span>
+            """,
+            unsafe_allow_html=True,
         )
-        st.caption(f'Modelo: {metrics["model"]}')
+        st.markdown(f"### {metrics['model']}")
+        st.caption("Modelo utilizado en esta inferencia")
 
-        class_col, priority_col = st.columns(2)
-        class_col.metric("Categoría", classification["category"])
-        priority_col.metric("Prioridad", classification["priority"].upper())
+        st.markdown(
+            f"""
+            <div class="classification-strip">
+                <span class="status-pill priority-{priority}">⚠️ {priority_label(priority)}</span>
+                <span class="classification-pill">🧩 {category_label(classification['category'])}</span>
+                <span class="classification-pill">🛠️ {area_label(classification['department'])}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        st.markdown(f'**Área responsable:** `{classification["department"]}`')
-        st.markdown(f'**Resumen:** {classification["summary"]}')
+        render_summary_box(classification["summary"])
 
-        with st.expander("Ver justificación del modelo"):
+        with st.expander("🧠 Justificación del modelo"):
             st.write(classification["reasoning"])
 
-        st.markdown("**Rendimiento**")
+        st.markdown("**⚡ Rendimiento**")
         metric_left, metric_right = st.columns(2)
         metric_left.metric(
             "Latencia",
@@ -244,11 +494,10 @@ def render_comparison_review(comparison: dict) -> None:
     )
     default_notes = human_review.get("notes") or "" if human_review else ""
 
-    st.subheader("👤 Evaluación humana de calidad")
-    st.caption(
-        "La persona supervisora fija la categoría y prioridad correctas. "
-        "ComunIA calcula después el acierto de Ollama y Groq contra esa "
-        "referencia, sin declarar un ganador automáticamente."
+    render_section_header(
+        "👤",
+        "Evaluación humana de calidad",
+        "La supervisión humana fija la referencia correcta y permite medir el acierto real de cada modelo.",
     )
 
     if human_review:
@@ -257,11 +506,11 @@ def render_comparison_review(comparison: dict) -> None:
         ref1, ref2, ref3 = st.columns(3)
         ref1.metric(
             "Categoría de referencia",
-            human_review["reference_category"],
+            category_label(human_review["reference_category"]),
         )
         ref2.metric(
             "Prioridad de referencia",
-            human_review["reference_priority"].upper(),
+            priority_label(human_review["reference_priority"]),
         )
         ref3.metric(
             "Preferencia humana",
@@ -315,11 +564,13 @@ def render_comparison_review(comparison: dict) -> None:
                     "Categoría correcta según supervisión humana",
                     category_values,
                     index=category_values.index(default_category),
+                    format_func=category_label,
                 )
                 reference_priority = st.selectbox(
                     "Prioridad correcta según supervisión humana",
                     priority_values,
                     index=priority_values.index(default_priority),
+                    format_func=priority_label,
                 )
 
             with form_right:
@@ -365,7 +616,11 @@ def render_comparison_review(comparison: dict) -> None:
 def render_quality_summary(summary: dict) -> None:
     """Muestra calidad acumulada contra la referencia humana."""
 
-    st.subheader("📊 Calidad comparativa acumulada")
+    render_section_header(
+        "📊",
+        "Calidad comparativa acumulada",
+        "Métricas calculadas únicamente sobre comparaciones validadas por una persona supervisora.",
+    )
 
     total_col, reviewed_col = st.columns(2)
     total_col.metric("Comparaciones realizadas", summary["total_comparisons"])
@@ -428,15 +683,56 @@ def render_quality_summary(summary: dict) -> None:
 
 
 with st.sidebar:
-    st.header("Estado")
+    st.markdown(
+        """
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-title">🏢 ComunIA</div>
+            <div class="sidebar-brand-subtitle">
+                Centro de control para triaje inteligente y supervisión humana.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="sidebar-label">Estado del sistema</div>', unsafe_allow_html=True)
     try:
         health = api_request("GET", "/health")
-        st.success(f'API conectada · {health["status"]}')
+        st.markdown(
+            '<span class="status-pill online">● API conectada</span>',
+            unsafe_allow_html=True,
+        )
+        st.caption(f'FastAPI · {health["status"]}')
     except RuntimeError as exc:
-        st.error(str(exc))
+        st.markdown(
+            '<span class="status-pill offline">● API sin conexión</span>',
+            unsafe_allow_html=True,
+        )
+        st.caption(str(exc))
+
+    st.markdown(
+        """
+        <div class="sidebar-panel">
+            <div class="sidebar-label">Proveedores activos</div>
+            <div class="sidebar-provider">🖥️ Ollama · Gemma 3 4B</div>
+            <div class="sidebar-provider">☁️ Groq · Qwen 3.8 27B</div>
+        </div>
+        <div class="sidebar-panel">
+            <div class="sidebar-label">Flujo de decisión</div>
+            <div class="sidebar-provider">1 · Recepción</div>
+            <div class="sidebar-provider">2 · Clasificación IA</div>
+            <div class="sidebar-provider">3 · Validación humana</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-st.subheader("Nueva incidencia")
+render_section_header(
+    "✉️",
+    "Nueva incidencia",
+    "Registra el aviso, selecciona un proveedor o compara ambos modelos sobre la misma entrada.",
+)
 
 with st.form("incident_form"):
     col_left, col_right = st.columns(2)
@@ -445,6 +741,7 @@ with st.form("incident_form"):
         channel = st.selectbox(
             "Canal *",
             ["email", "whatsapp", "phone"],
+            format_func=lambda value: CHANNEL_LABELS[value],
         )
         community_reference = st.text_input(
             "Comunidad *",
@@ -464,6 +761,7 @@ with st.form("incident_form"):
         provider = st.selectbox(
             "Proveedor para triaje",
             ["ollama", "groq"],
+            format_func=lambda value: PROVIDER_LABELS[value],
         )
 
     text = st.text_area(
@@ -555,15 +853,20 @@ if "last_triage" in st.session_state:
     result = st.session_state["last_triage"]
 
     st.divider()
-    st.subheader("Resultado del triaje")
-    st.caption(
-        f'Comunidad identificada: {result["incident"]["community_reference"]}'
+    render_section_header(
+        "🧠",
+        "Resultado del triaje",
+        f'Comunidad identificada: {result["incident"]["community_reference"]}',
     )
 
     render_classification(result["classification"])
     render_metrics(result["metrics"])
 
-    st.subheader("Validación humana")
+    render_section_header(
+        "✅",
+        "Validación humana",
+        "Aprueba la propuesta del modelo o corrige la clasificación antes del registro final.",
+    )
 
     if st.button("✓ Aprobar clasificación"):
         try:
@@ -588,6 +891,7 @@ if "last_triage" in st.session_state:
                 index=[item.value for item in Category].index(
                     current["category"]
                 ),
+                format_func=category_label,
             )
             corrected_priority = st.selectbox(
                 "Prioridad",
@@ -595,6 +899,7 @@ if "last_triage" in st.session_state:
                 index=[item.value for item in Priority].index(
                     current["priority"]
                 ),
+                format_func=priority_label,
             )
 
             maintenance_categories = {
@@ -622,6 +927,7 @@ if "last_triage" in st.session_state:
                 index=[item.value for item in ResponsibleArea].index(
                     suggested_area
                 ),
+                format_func=area_label,
             )
             corrected_summary = st.text_input(
                 "Resumen (máximo 10 palabras)",
@@ -660,20 +966,20 @@ if "last_triage" in st.session_state:
             except RuntimeError as exc:
                 st.error(str(exc))
 
-    st.caption(f'Estado de revisión: {result["human_status"]}')
+    st.caption(f'Estado de revisión: {status_label(result["human_status"])}')
 
 
 if "last_compare" in st.session_state:
     comparison = st.session_state["last_compare"]
 
     st.divider()
-    st.subheader("🔎 Comparación Ollama vs Groq")
-    st.caption(
-        "Misma incidencia, misma entrada y mismo contrato Pydantic. "
-        "Las diferencias visibles proceden del modelo y del proveedor."
+    render_section_header(
+        "⚖️",
+        "Comparación Ollama vs Groq",
+        "Misma incidencia y mismo contrato Pydantic: comparamos clasificación, latencia, tokens, coste y calidad.",
     )
     st.caption(
-        f'Comunidad identificada: '
+        f'🏢 Comunidad identificada: '
         f'{comparison["incident"]["community_reference"]}'
     )
 
@@ -716,8 +1022,8 @@ if "last_compare" in st.session_state:
             {
                 "proveedor": metrics["provider"],
                 "modelo": metrics["model"],
-                "categoría": classification["category"],
-                "prioridad": classification["priority"],
+                "categoría": category_label(classification["category"]),
+                "prioridad": priority_label(classification["priority"]),
                 "latencia": format_latency(metrics["latency_ms"]),
                 "tokens": metrics["input_tokens"] + metrics["output_tokens"],
                 "coste_ref": round(metrics["estimated_cost"], 8),
@@ -741,88 +1047,266 @@ if "last_compare" in st.session_state:
 
 
 st.divider()
-with st.expander("Histórico de incidencias"):
-    if st.button("Actualizar histórico de incidencias"):
+with st.expander("🗂️ Histórico de incidencias", expanded=False):
+    refresh_history = st.button(
+        "Actualizar histórico",
+        use_container_width=False,
+    )
+
+    if refresh_history or "incident_history" not in st.session_state:
         try:
-            incidents = api_request("GET", "/incidents")
-            if not incidents:
-                st.info("Todavía no hay incidencias guardadas.")
-            else:
-                rows = []
-                for item in incidents:
-                    effective = (
-                        item.get("human_classification")
-                        or item["classification"]
-                    )
-                    rows.append(
-                        {
-                            "id": item["incident_id"],
-                            "fecha": item["incident"]["received_at"],
-                            "comunidad": item["incident"][
-                                "community_reference"
-                            ],
-                            "categoría": effective["category"],
-                            "prioridad": effective["priority"],
-                            "estado": item["human_status"],
-                            "proveedor": item["metrics"]["provider"],
-                            "latencia_ms": item["metrics"]["latency_ms"],
-                            "coste": item["metrics"]["estimated_cost"],
-                        }
-                    )
-                st.dataframe(rows, use_container_width=True, hide_index=True)
+            st.session_state["incident_history"] = api_request(
+                "GET", "/incidents"
+            )
         except RuntimeError as exc:
             st.error(str(exc))
+            st.session_state["incident_history"] = []
+
+    incidents = st.session_state.get("incident_history", [])
+
+    if not incidents:
+        st.info("Todavía no hay incidencias guardadas.")
+    else:
+        public_refs = build_public_incident_references(incidents)
+        ordered_incidents = sorted(
+            incidents,
+            key=lambda item: item["incident"]["received_at"],
+            reverse=True,
+        )
+
+        rows = []
+        for item in ordered_incidents:
+            effective = (
+                item.get("human_classification")
+                or item["classification"]
+            )
+            rows.append(
+                {
+                    "Incidencia": public_refs[item["incident_id"]],
+                    "Fecha": format_received_at(
+                        item["incident"]["received_at"]
+                    ),
+                    "Comunidad": item["incident"]["community_reference"],
+                    "Categoría": category_label(effective["category"]),
+                    "Prioridad": priority_label(effective["priority"]),
+                    "Estado": status_label(item["human_status"]),
+                    "Proveedor": PROVIDER_LABELS.get(
+                        item["metrics"]["provider"],
+                        item["metrics"]["provider"],
+                    ),
+                }
+            )
+
+        st.dataframe(
+            rows,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        by_id = {item["incident_id"]: item for item in ordered_incidents}
+        selected_id = st.selectbox(
+            "Selecciona una incidencia para consultar sus datos",
+            [item["incident_id"] for item in ordered_incidents],
+            format_func=lambda incident_id: (
+                f"{public_refs[incident_id]} · "
+                f"{format_received_at(by_id[incident_id]['incident']['received_at'])} · "
+                f"{by_id[incident_id]['incident']['community_reference']}"
+            ),
+        )
+
+        selected = by_id[selected_id]
+        effective = (
+            selected.get("human_classification")
+            or selected["classification"]
+        )
+
+        st.markdown(
+            f"### 📄 {public_refs[selected_id]}"
+        )
+        detail_left, detail_right = st.columns(2)
+        with detail_left:
+            st.markdown(
+                f"**Fecha:** {format_received_at(selected['incident']['received_at'])}"
+            )
+            st.markdown(
+                f"**Comunidad:** {selected['incident']['community_reference']}"
+            )
+            st.markdown(
+                f"**Vivienda / referencia:** {selected['incident']['property_reference']}"
+            )
+            st.markdown(
+                f"**Canal:** {CHANNEL_LABELS.get(selected['incident']['channel'], selected['incident']['channel'])}"
+            )
+        with detail_right:
+            st.markdown(
+                f"**Persona de contacto:** {selected['incident']['contact_name']}"
+            )
+            st.markdown(
+                f"**Teléfono:** {selected['incident']['contact_phone']}"
+            )
+            st.markdown(
+                f"**Proveedor:** {PROVIDER_LABELS.get(selected['metrics']['provider'], selected['metrics']['provider'])}"
+            )
+            st.markdown(
+                f"**Estado:** {status_label(selected['human_status'])}"
+            )
+
+        render_classification(effective)
+        st.caption(
+            f"Identificador técnico interno: {selected['incident_id']}"
+        )
 
 
-with st.expander("Histórico de comparaciones y calidad"):
-    if st.button("Actualizar histórico de comparaciones"):
+with st.expander("📚 Histórico de comparaciones y calidad"):
+    refresh_comparisons = st.button(
+        "Actualizar histórico de comparaciones",
+        use_container_width=False,
+    )
+
+    if (
+        refresh_comparisons
+        or "comparison_history" not in st.session_state
+    ):
         try:
-            comparisons = api_request("GET", "/comparisons")
-            if not comparisons:
-                st.info("Todavía no hay comparaciones guardadas.")
-            else:
-                rows = []
-                for item in comparisons:
-                    review = item.get("human_review")
-                    by_provider = {
-                        result["metrics"]["provider"]: result
-                        for result in item["results"]
-                    }
-                    rows.append(
-                        {
-                            "id": item["incident_id"],
-                            "fecha": item["incident"]["received_at"],
-                            "comunidad": item["incident"][
-                                "community_reference"
-                            ],
-                            "ollama_categoria": by_provider["ollama"][
-                                "classification"
-                            ]["category"],
-                            "groq_categoria": by_provider["groq"][
-                                "classification"
-                            ]["category"],
-                            "ollama_prioridad": by_provider["ollama"][
-                                "classification"
-                            ]["priority"],
-                            "groq_prioridad": by_provider["groq"][
-                                "classification"
-                            ]["priority"],
-                            "validada": "sí" if review else "no",
-                            "referencia_categoria": (
-                                review["reference_category"] if review else "—"
-                            ),
-                            "referencia_prioridad": (
-                                review["reference_priority"] if review else "—"
-                            ),
-                            "preferencia_humana": (
-                                review["preferred_result"] if review else "—"
-                            ),
-                        }
-                    )
-
-                st.dataframe(rows, use_container_width=True, hide_index=True)
-
-                quality_summary = api_request("GET", "/comparisons/quality")
-                render_quality_summary(quality_summary)
+            st.session_state["comparison_history"] = api_request(
+                "GET", "/comparisons"
+            )
         except RuntimeError as exc:
             st.error(str(exc))
+            st.session_state["comparison_history"] = []
+
+    comparisons = st.session_state.get("comparison_history", [])
+
+    if not comparisons:
+        st.info("Todavía no hay comparaciones guardadas.")
+    else:
+        public_comparison_refs = build_public_comparison_references(
+            comparisons
+        )
+        ordered_comparisons = sorted(
+            comparisons,
+            key=lambda item: item["incident"]["received_at"],
+            reverse=True,
+        )
+
+        rows = []
+        for item in ordered_comparisons:
+            review = item.get("human_review")
+            by_provider = {
+                result["metrics"]["provider"]: result
+                for result in item["results"]
+            }
+            rows.append(
+                {
+                    "Comparación": public_comparison_refs[
+                        item["incident_id"]
+                    ],
+                    "Fecha": format_received_at(
+                        item["incident"]["received_at"]
+                    ),
+                    "Comunidad": item["incident"][
+                        "community_reference"
+                    ],
+                    "Ollama · categoría": category_label(
+                        by_provider["ollama"]["classification"]["category"]
+                    ),
+                    "Groq · categoría": category_label(
+                        by_provider["groq"]["classification"]["category"]
+                    ),
+                    "Ollama · prioridad": priority_label(
+                        by_provider["ollama"]["classification"]["priority"]
+                    ),
+                    "Groq · prioridad": priority_label(
+                        by_provider["groq"]["classification"]["priority"]
+                    ),
+                    "Validación humana": "Sí" if review else "Pendiente",
+                }
+            )
+
+        st.dataframe(
+            rows,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        comparisons_by_id = {
+            item["incident_id"]: item
+            for item in ordered_comparisons
+        }
+        selected_comparison_id = st.selectbox(
+            "Selecciona una comparación para consultar sus datos",
+            [item["incident_id"] for item in ordered_comparisons],
+            format_func=lambda comparison_id: (
+                f"{public_comparison_refs[comparison_id]} · "
+                f"{format_received_at(comparisons_by_id[comparison_id]['incident']['received_at'])} · "
+                f"{comparisons_by_id[comparison_id]['incident']['community_reference']}"
+            ),
+            key="comparison_history_selector",
+        )
+
+        selected_comparison = comparisons_by_id[
+            selected_comparison_id
+        ]
+        st.markdown(
+            f"### 📊 {public_comparison_refs[selected_comparison_id]}"
+        )
+        st.caption(
+            f"{format_received_at(selected_comparison['incident']['received_at'])}"
+            f" · {selected_comparison['incident']['community_reference']}"
+        )
+
+        provider_columns = st.columns(2)
+        for column, provider_result in zip(
+            provider_columns,
+            selected_comparison["results"],
+            strict=True,
+        ):
+            with column:
+                render_provider_comparison_card(provider_result)
+
+        review = selected_comparison.get("human_review")
+        if review:
+            st.markdown("**👤 Referencia humana guardada**")
+            human_left, human_mid, human_right = st.columns(3)
+            human_left.metric(
+                "Categoría correcta",
+                category_label(review["reference_category"]),
+            )
+            human_mid.metric(
+                "Prioridad correcta",
+                priority_label(review["reference_priority"]),
+            )
+            human_right.metric(
+                "Valoración",
+                PREFERENCE_LABELS.get(
+                    review["preferred_result"],
+                    review["preferred_result"],
+                ),
+            )
+        else:
+            st.info(
+                "Esta comparación todavía no tiene validación humana."
+            )
+
+        try:
+            quality_summary = api_request("GET", "/comparisons/quality")
+            render_quality_summary(quality_summary)
+        except RuntimeError as exc:
+            st.warning(
+                "No se pudo cargar la calidad acumulada: "
+                f"{exc}"
+            )
+
+
+st.markdown(
+    """
+    <div class="comunia-footer">
+        <strong>ComunIA</strong> · FastAPI + Pydantic + Ollama + Groq + Streamlit ·
+        Diseño orientado a supervisión humana y trazabilidad.<br>
+        Fondo: <a href="https://unsplash.com/photos/modern-apartment-buildings-with-a-green-courtyard-8Li3kSPoeo4" target="_blank">Corentin Jaunault / Unsplash</a>
+        · uso gratuito bajo Unsplash License.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
