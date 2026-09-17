@@ -36,6 +36,24 @@ st.caption(
 )
 
 
+PROVIDER_LABELS = {
+    "ollama": "Ollama · Local",
+    "groq": "Groq · Externo",
+}
+
+PROVIDER_ICONS = {
+    "ollama": "🖥️",
+    "groq": "☁️",
+}
+
+PREFERENCE_LABELS = {
+    "tie": "Ambos por igual",
+    "ollama": "Ollama ofrece el mejor resultado",
+    "groq": "Groq ofrece el mejor resultado",
+    "neither": "Ninguno de los dos es satisfactorio",
+}
+
+
 def api_request(
     method: str,
     endpoint: str,
@@ -61,10 +79,8 @@ def api_request(
             error_data = response.json()
             detail = error_data.get("detail", response.text)
 
-            # Errores de validación de FastAPI / Pydantic
             if isinstance(detail, list):
                 messages = []
-
                 field_names = {
                     "text": "Descripción de la incidencia",
                     "channel": "Canal",
@@ -72,23 +88,29 @@ def api_request(
                     "property_reference": "Vivienda / local / referencia",
                     "contact_name": "Persona de contacto",
                     "contact_phone": "Teléfono",
+                    "reference_category": "Categoría de referencia",
+                    "reference_priority": "Prioridad de referencia",
+                    "preferred_result": "Preferencia humana",
                 }
 
                 for error in detail:
                     location = error.get("loc", [])
                     field = location[-1] if location else "campo"
                     field_name = field_names.get(field, field)
-
                     error_type = error.get("type", "")
 
                     if error_type == "string_too_short":
-                        message = f"{field_name}: el campo es obligatorio o demasiado corto."
-
+                        message = (
+                            f"{field_name}: el campo es obligatorio "
+                            "o demasiado corto."
+                        )
                     elif error_type == "missing":
                         message = f"{field_name}: este campo es obligatorio."
-
                     else:
-                        message = f"{field_name}: {error.get('msg', 'valor no válido')}"
+                        message = (
+                            f"{field_name}: "
+                            f"{error.get('msg', 'valor no válido')}"
+                        )
 
                     messages.append(message)
 
@@ -100,6 +122,20 @@ def api_request(
         raise RuntimeError(str(detail))
 
     return response.json()
+
+
+def format_latency(milliseconds: float) -> str:
+    """Muestra milisegundos o segundos según el tamaño del valor."""
+
+    if milliseconds >= 1000:
+        return f"{milliseconds / 1000:.2f} s"
+    return f"{milliseconds:.0f} ms"
+
+
+def format_percentage(value: float | None) -> str:
+    if value is None:
+        return "Sin datos"
+    return f"{value:.1f}%"
 
 
 def render_classification(classification: dict) -> None:
@@ -118,7 +154,7 @@ def render_classification(classification: dict) -> None:
 def render_metrics(metrics: dict) -> None:
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Proveedor", metrics["provider"])
-    col2.metric("Latencia", f'{metrics["latency_ms"]:.0f} ms')
+    col2.metric("Latencia", format_latency(metrics["latency_ms"]))
     col3.metric(
         "Tokens",
         metrics["input_tokens"] + metrics["output_tokens"],
@@ -128,6 +164,267 @@ def render_metrics(metrics: dict) -> None:
         f'${metrics["estimated_cost"]:.6f}',
     )
     st.caption(f'Modelo: {metrics["model"]}')
+    if metrics["provider"] == "groq":
+        st.caption(
+            "El coste mostrado usa la tarifa pública de referencia; "
+            "en Groq Free tier el coste facturado puede ser 0."
+        )
+
+
+def render_provider_comparison_card(provider_result: dict) -> None:
+    """Tarjeta compacta para evitar métricas cortadas en columnas estrechas."""
+
+    metrics = provider_result["metrics"]
+    classification = provider_result["classification"]
+    provider = metrics["provider"]
+
+    with st.container(border=True):
+        st.markdown(
+            f"### {PROVIDER_ICONS.get(provider, '🤖')} "
+            f"{PROVIDER_LABELS.get(provider, provider.upper())}"
+        )
+        st.caption(f'Modelo: {metrics["model"]}')
+
+        class_col, priority_col = st.columns(2)
+        class_col.metric("Categoría", classification["category"])
+        priority_col.metric("Prioridad", classification["priority"].upper())
+
+        st.markdown(f'**Área responsable:** `{classification["department"]}`')
+        st.markdown(f'**Resumen:** {classification["summary"]}')
+
+        with st.expander("Ver justificación del modelo"):
+            st.write(classification["reasoning"])
+
+        st.markdown("**Rendimiento**")
+        metric_left, metric_right = st.columns(2)
+        metric_left.metric(
+            "Latencia",
+            format_latency(metrics["latency_ms"]),
+        )
+        metric_right.metric(
+            "Tokens totales",
+            metrics["input_tokens"] + metrics["output_tokens"],
+        )
+
+        cost_left, cost_right = st.columns(2)
+        cost_left.metric(
+            "Entrada / salida",
+            f'{metrics["input_tokens"]} / {metrics["output_tokens"]}',
+        )
+        cost_right.metric(
+            "Coste ref.",
+            f'${metrics["estimated_cost"]:.6f}',
+        )
+
+        if provider == "groq":
+            st.caption(
+                "Coste de referencia por tokens; en Free tier el coste "
+                "facturado puede ser 0."
+            )
+
+
+def render_comparison_review(comparison: dict) -> None:
+    """Permite crear o actualizar la referencia humana de calidad."""
+
+    human_review = comparison.get("human_review")
+    left, right = comparison["results"]
+
+    default_category = (
+        human_review["reference_category"]
+        if human_review
+        else left["classification"]["category"]
+    )
+    default_priority = (
+        human_review["reference_priority"]
+        if human_review
+        else left["classification"]["priority"]
+    )
+    default_preference = (
+        human_review["preferred_result"] if human_review else "tie"
+    )
+    default_notes = human_review.get("notes") or "" if human_review else ""
+
+    st.subheader("👤 Evaluación humana de calidad")
+    st.caption(
+        "La persona supervisora fija la categoría y prioridad correctas. "
+        "ComunIA calcula después el acierto de Ollama y Groq contra esa "
+        "referencia, sin declarar un ganador automáticamente."
+    )
+
+    if human_review:
+        st.success("Esta comparación ya tiene una validación humana guardada.")
+
+        ref1, ref2, ref3 = st.columns(3)
+        ref1.metric(
+            "Categoría de referencia",
+            human_review["reference_category"],
+        )
+        ref2.metric(
+            "Prioridad de referencia",
+            human_review["reference_priority"].upper(),
+        )
+        ref3.metric(
+            "Preferencia humana",
+            PREFERENCE_LABELS.get(
+                human_review["preferred_result"],
+                human_review["preferred_result"],
+            ),
+        )
+
+        assessment_columns = st.columns(2)
+        for column, assessment in zip(
+            assessment_columns,
+            human_review["assessments"],
+            strict=True,
+        ):
+            with column:
+                provider = assessment["provider"]
+                with st.container(border=True):
+                    st.markdown(
+                        f"**{PROVIDER_ICONS.get(provider, '🤖')} "
+                        f"{PROVIDER_LABELS.get(provider, provider)}**"
+                    )
+                    st.write(
+                        "Categoría: "
+                        + ("✅ correcta" if assessment["category_correct"] else "❌ distinta")
+                    )
+                    st.write(
+                        "Prioridad: "
+                        + ("✅ correcta" if assessment["priority_correct"] else "❌ distinta")
+                    )
+                    if assessment["exact_match"]:
+                        st.success("Coincidencia exacta con la referencia humana")
+                    else:
+                        st.info(
+                            f'Coincidencias: {assessment["quality_points"]}/2'
+                        )
+
+    category_values = [item.value for item in Category]
+    priority_values = [item.value for item in Priority]
+    preference_values = list(PREFERENCE_LABELS.keys())
+
+    with st.expander(
+        "Actualizar validación" if human_review else "Validar comparación",
+        expanded=human_review is None,
+    ):
+        with st.form(f'comparison_review_{comparison["incident_id"]}'):
+            form_left, form_right = st.columns(2)
+
+            with form_left:
+                reference_category = st.selectbox(
+                    "Categoría correcta según supervisión humana",
+                    category_values,
+                    index=category_values.index(default_category),
+                )
+                reference_priority = st.selectbox(
+                    "Prioridad correcta según supervisión humana",
+                    priority_values,
+                    index=priority_values.index(default_priority),
+                )
+
+            with form_right:
+                preferred_result = st.selectbox(
+                    "Valoración cualitativa global",
+                    preference_values,
+                    index=preference_values.index(default_preference),
+                    format_func=lambda value: PREFERENCE_LABELS[value],
+                )
+                notes = st.text_area(
+                    "Observaciones de la persona supervisora",
+                    value=default_notes,
+                    placeholder=(
+                        "Opcional: comenta diferencias en resumen, razonamiento "
+                        "o utilidad práctica."
+                    ),
+                )
+
+            save_review = st.form_submit_button(
+                "Guardar validación humana",
+                use_container_width=True,
+            )
+
+        if save_review:
+            try:
+                updated = api_request(
+                    "PATCH",
+                    f'/comparisons/{comparison["incident_id"]}/review',
+                    {
+                        "reference_category": reference_category,
+                        "reference_priority": reference_priority,
+                        "preferred_result": preferred_result,
+                        "notes": notes or None,
+                    },
+                )
+                st.session_state["last_compare"] = updated
+                st.success("Validación humana guardada.")
+                st.rerun()
+            except RuntimeError as exc:
+                st.error(str(exc))
+
+
+def render_quality_summary(summary: dict) -> None:
+    """Muestra calidad acumulada contra la referencia humana."""
+
+    st.subheader("📊 Calidad comparativa acumulada")
+
+    total_col, reviewed_col = st.columns(2)
+    total_col.metric("Comparaciones realizadas", summary["total_comparisons"])
+    reviewed_col.metric(
+        "Comparaciones validadas",
+        summary["reviewed_comparisons"],
+    )
+
+    if summary["reviewed_comparisons"] == 0:
+        st.info(
+            "Aún no hay comparaciones validadas. Las tasas de calidad se "
+            "calcularán cuando una persona defina la referencia correcta."
+        )
+        return
+
+    columns = st.columns(2)
+    for column, provider in zip(columns, summary["providers"], strict=True):
+        with column:
+            provider_name = provider["provider"]
+            with st.container(border=True):
+                st.markdown(
+                    f"### {PROVIDER_ICONS.get(provider_name, '🤖')} "
+                    f"{PROVIDER_LABELS.get(provider_name, provider_name)}"
+                )
+
+                accuracy_left, accuracy_right = st.columns(2)
+                accuracy_left.metric(
+                    "Acierto categoría",
+                    format_percentage(provider["category_accuracy_pct"]),
+                )
+                accuracy_right.metric(
+                    "Acierto prioridad",
+                    format_percentage(provider["priority_accuracy_pct"]),
+                )
+
+                exact_left, preferred_right = st.columns(2)
+                exact_left.metric(
+                    "Coincidencia exacta",
+                    format_percentage(provider["exact_match_rate_pct"]),
+                )
+                preferred_right.metric(
+                    "Preferido por supervisor",
+                    provider["preferred_count"],
+                )
+
+                st.caption(
+                    f'Revisadas: {provider["reviewed"]} · '
+                    f'Latencia media: '
+                    f'{format_latency(provider["average_latency_ms"] or 0)} · '
+                    f'Coste ref. acumulado: '
+                    f'${provider["total_estimated_cost"]:.6f}'
+                )
+
+    st.caption(
+        "La calidad se calcula únicamente sobre comparaciones revisadas por "
+        "una persona: acierto de categoría, acierto de prioridad y coincidencia "
+        "exacta de ambos campos. La preferencia humana es una señal cualitativa "
+        "separada y no sustituye esas métricas."
+    )
 
 
 with st.sidebar:
@@ -166,7 +463,7 @@ with st.form("incident_form"):
         )
         provider = st.selectbox(
             "Proveedor para triaje",
-            ["ollama", "openai"],
+            ["ollama", "groq"],
         )
 
     text = st.text_area(
@@ -184,7 +481,7 @@ with st.form("incident_form"):
         use_container_width=True,
     )
     compare = col_b.form_submit_button(
-        "Comparar Ollama vs OpenAI",
+        "Comparar Ollama vs Groq",
         use_container_width=True,
     )
 
@@ -198,7 +495,6 @@ incident_payload = {
     "contact_phone": contact_phone,
 }
 
-# Comprobación previa de campos obligatorios en el formulario
 required_fields = {
     "Comunidad": community_reference,
     "Vivienda / local / referencia": property_reference,
@@ -212,6 +508,7 @@ missing_fields = [
     for field_name, value in required_fields.items()
     if not value.strip()
 ]
+
 
 if analyse:
     if missing_fields:
@@ -229,10 +526,8 @@ if analyse:
                     "provider": provider,
                 },
             )
-
             st.session_state["last_triage"] = result
             st.session_state.pop("last_compare", None)
-
         except RuntimeError as exc:
             st.error(str(exc))
 
@@ -248,16 +543,13 @@ if compare:
             result = api_request(
                 "POST",
                 "/compare",
-                {
-                    "incident": incident_payload,
-                },
+                {"incident": incident_payload},
             )
-
             st.session_state["last_compare"] = result
             st.session_state.pop("last_triage", None)
-
         except RuntimeError as exc:
             st.error(str(exc))
+
 
 if "last_triage" in st.session_state:
     result = st.session_state["last_triage"]
@@ -368,32 +660,31 @@ if "last_triage" in st.session_state:
             except RuntimeError as exc:
                 st.error(str(exc))
 
-    st.caption(
-        f'Estado de revisión: {result["human_status"]}'
-    )
+    st.caption(f'Estado de revisión: {result["human_status"]}')
 
 
 if "last_compare" in st.session_state:
     comparison = st.session_state["last_compare"]
 
     st.divider()
-    st.subheader("Comparación de proveedores")
+    st.subheader("🔎 Comparación Ollama vs Groq")
     st.caption(
-        "Misma incidencia, mismo contrato de salida y dos proveedores."
+        "Misma incidencia, misma entrada y mismo contrato Pydantic. "
+        "Las diferencias visibles proceden del modelo y del proveedor."
+    )
+    st.caption(
+        f'Comunidad identificada: '
+        f'{comparison["incident"]["community_reference"]}'
     )
 
-    columns = st.columns(2)
-
+    columns = st.columns(2, gap="large")
     for column, provider_result in zip(
         columns,
         comparison["results"],
         strict=True,
     ):
         with column:
-            provider_name = provider_result["metrics"]["provider"]
-            st.markdown(f"### {provider_name.upper()}")
-            render_classification(provider_result["classification"])
-            render_metrics(provider_result["metrics"])
+            render_provider_comparison_card(provider_result)
 
     left, right = comparison["results"]
     same_category = (
@@ -405,17 +696,53 @@ if "last_compare" in st.session_state:
         == right["classification"]["priority"]
     )
 
-    st.info(
-        "Coincidencia entre modelos · "
-        f"categoría: {'sí' if same_category else 'no'} · "
-        f"prioridad: {'sí' if same_priority else 'no'}. "
-        "La calidad final debe ser validada por una persona."
+    if same_category and same_priority:
+        st.success(
+            "Los modelos coinciden en categoría y prioridad. "
+            "La coincidencia no demuestra por sí sola que la clasificación "
+            "sea correcta: debe validarla una persona."
+        )
+    else:
+        st.warning(
+            "Los modelos discrepan en al menos un campo de clasificación. "
+            "La referencia humana determinará cuál se aproxima mejor."
+        )
+
+    comparison_rows = []
+    for provider_result in comparison["results"]:
+        metrics = provider_result["metrics"]
+        classification = provider_result["classification"]
+        comparison_rows.append(
+            {
+                "proveedor": metrics["provider"],
+                "modelo": metrics["model"],
+                "categoría": classification["category"],
+                "prioridad": classification["priority"],
+                "latencia": format_latency(metrics["latency_ms"]),
+                "tokens": metrics["input_tokens"] + metrics["output_tokens"],
+                "coste_ref": round(metrics["estimated_cost"], 8),
+            }
+        )
+
+    st.markdown("**Resumen comparativo**")
+    st.dataframe(
+        comparison_rows,
+        use_container_width=True,
+        hide_index=True,
     )
+
+    render_comparison_review(comparison)
+
+    try:
+        quality_summary = api_request("GET", "/comparisons/quality")
+        render_quality_summary(quality_summary)
+    except RuntimeError as exc:
+        st.warning(f"No se pudo cargar la calidad acumulada: {exc}")
 
 
 st.divider()
 with st.expander("Histórico de incidencias"):
-    if st.button("Actualizar histórico"):
+    if st.button("Actualizar histórico de incidencias"):
         try:
             incidents = api_request("GET", "/incidents")
             if not incidents:
@@ -442,70 +769,60 @@ with st.expander("Histórico de incidencias"):
                             "coste": item["metrics"]["estimated_cost"],
                         }
                     )
-                st.dataframe(rows, use_container_width=True)
+                st.dataframe(rows, use_container_width=True, hide_index=True)
+        except RuntimeError as exc:
+            st.error(str(exc))
 
-                st.markdown("**Calidad por proveedor (validación humana)**")
-                provider_stats = {}
-                for item in incidents:
-                    provider_name = item["metrics"]["provider"]
-                    stats = provider_stats.setdefault(
-                        provider_name,
+
+with st.expander("Histórico de comparaciones y calidad"):
+    if st.button("Actualizar histórico de comparaciones"):
+        try:
+            comparisons = api_request("GET", "/comparisons")
+            if not comparisons:
+                st.info("Todavía no hay comparaciones guardadas.")
+            else:
+                rows = []
+                for item in comparisons:
+                    review = item.get("human_review")
+                    by_provider = {
+                        result["metrics"]["provider"]: result
+                        for result in item["results"]
+                    }
+                    rows.append(
                         {
-                            "procesadas": 0,
-                            "revisadas": 0,
-                            "aprobadas": 0,
-                            "corregidas": 0,
-                            "latencia_total": 0.0,
-                            "coste_total": 0.0,
-                        },
-                    )
-                    stats["procesadas"] += 1
-                    stats["latencia_total"] += item["metrics"]["latency_ms"]
-                    stats["coste_total"] += item["metrics"]["estimated_cost"]
-
-                    if item["human_status"] in {"approved", "corrected"}:
-                        stats["revisadas"] += 1
-                    if item["human_status"] == "approved":
-                        stats["aprobadas"] += 1
-                    if item["human_status"] == "corrected":
-                        stats["corregidas"] += 1
-
-                quality_rows = []
-                for provider_name, stats in provider_stats.items():
-                    reviewed = stats["revisadas"]
-                    approval_rate = (
-                        stats["aprobadas"] / reviewed * 100
-                        if reviewed
-                        else None
-                    )
-                    quality_rows.append(
-                        {
-                            "proveedor": provider_name,
-                            "procesadas": stats["procesadas"],
-                            "revisadas": reviewed,
-                            "tasa_aprobacion_%": (
-                                round(approval_rate, 1)
-                                if approval_rate is not None
-                                else "sin datos"
+                            "id": item["incident_id"],
+                            "fecha": item["incident"]["received_at"],
+                            "comunidad": item["incident"][
+                                "community_reference"
+                            ],
+                            "ollama_categoria": by_provider["ollama"][
+                                "classification"
+                            ]["category"],
+                            "groq_categoria": by_provider["groq"][
+                                "classification"
+                            ]["category"],
+                            "ollama_prioridad": by_provider["ollama"][
+                                "classification"
+                            ]["priority"],
+                            "groq_prioridad": by_provider["groq"][
+                                "classification"
+                            ]["priority"],
+                            "validada": "sí" if review else "no",
+                            "referencia_categoria": (
+                                review["reference_category"] if review else "—"
                             ),
-                            "correcciones": stats["corregidas"],
-                            "latencia_media_ms": round(
-                                stats["latencia_total"]
-                                / stats["procesadas"],
-                                1,
+                            "referencia_prioridad": (
+                                review["reference_priority"] if review else "—"
                             ),
-                            "coste_total": round(
-                                stats["coste_total"],
-                                8,
+                            "preferencia_humana": (
+                                review["preferred_result"] if review else "—"
                             ),
                         }
                     )
 
-                st.dataframe(quality_rows, use_container_width=True)
-                st.caption(
-                    "La tasa de aprobación se usa como indicador práctico "
-                    "de calidad: solo se calcula sobre incidencias revisadas "
-                    "por una persona."
-                )
+                st.dataframe(rows, use_container_width=True, hide_index=True)
+
+                quality_summary = api_request("GET", "/comparisons/quality")
+                render_quality_summary(quality_summary)
         except RuntimeError as exc:
             st.error(str(exc))

@@ -29,14 +29,15 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "gemma3"
 
-    openai_api_key: SecretStr | None = None
-    openai_base_url: str = "https://api.openai.com/v1"
-    openai_model: str = "gpt-5.6-luna"
+    groq_api_key: SecretStr | None = None
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_model: str = "qwen/qwen3.8-27b"
 
-    # Precios configurables por millón de tokens. Si se cambia de modelo,
-    # deben actualizarse también estos valores.
-    openai_input_cost_per_1m: float = Field(default=0.20, ge=0)
-    openai_output_cost_per_1m: float = Field(default=1.20, ge=0)
+    # Tarifa publicada de referencia por millón de tokens.
+    # El proyecto puede funcionar en Groq Free tier sin coste facturado,
+    # pero mantenemos esta estimación para comparar proveedores en la rúbrica.
+    groq_input_cost_per_1m: float = Field(default=0.80, ge=0)
+    groq_output_cost_per_1m: float = Field(default=4.00, ge=0)
 
     temperature: float = Field(default=0.1, ge=0, le=2)
     top_p: float = Field(default=0.9, gt=0, le=1)
@@ -46,6 +47,7 @@ class Settings(BaseSettings):
     max_repair_attempts: int = Field(default=2, ge=0, le=4)
 
     incidents_path: Path = PROJECT_ROOT / "data" / "incidents.json"
+    comparisons_path: Path = PROJECT_ROOT / "data" / "comparisons.json"
     communities_path: Path = PROJECT_ROOT / "data" / "communities.json"
 
 

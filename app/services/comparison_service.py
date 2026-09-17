@@ -1,17 +1,23 @@
-"""Comparación de Ollama y OpenAI sobre la misma incidencia."""
+"""Comparación de Ollama y Groq sobre la misma incidencia."""
 
 import asyncio
 
 from app.core.enums import LLMProvider
 from app.models.schemas import ComparisonRequest, ComparisonResponse
+from app.services.comparison_repository import ComparisonRepository
 from app.services.triage_service import TriageService
 
 
 class ComparisonService:
-    """Ejecuta ambos proveedores sin duplicar los datos de la incidencia."""
+    """Ejecuta ambos proveedores y persiste una única comparación."""
 
-    def __init__(self, triage_service: TriageService) -> None:
+    def __init__(
+        self,
+        triage_service: TriageService,
+        repository: ComparisonRepository,
+    ) -> None:
         self.triage_service = triage_service
+        self.repository = repository
 
     async def compare(
         self,
@@ -21,18 +27,19 @@ class ComparisonService:
             request.incident
         )
 
-        ollama_result, openai_result = await asyncio.gather(
+        ollama_result, groq_result = await asyncio.gather(
             self.triage_service.classify_resolved_incident(
                 resolved_incident,
                 LLMProvider.OLLAMA,
             ),
             self.triage_service.classify_resolved_incident(
                 resolved_incident,
-                LLMProvider.OPENAI,
+                LLMProvider.GROQ,
             ),
         )
 
-        return ComparisonResponse(
+        response = ComparisonResponse(
             incident=resolved_incident,
-            results=[ollama_result, openai_result],
+            results=[ollama_result, groq_result],
         )
+        return self.repository.save(response)

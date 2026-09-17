@@ -31,3 +31,7 @@ class PersistenceError(ComunIAError):
 
 class IncidentNotFoundError(PersistenceError):
     """No existe la incidencia solicitada."""
+
+
+class ComparisonNotFoundError(PersistenceError):
+    """No existe la comparación solicitada."""

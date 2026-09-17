@@ -22,10 +22,10 @@ class MetricsService:
 
         input_cost = (
             input_tokens / 1_000_000
-        ) * self.settings.openai_input_cost_per_1m
+        ) * self.settings.groq_input_cost_per_1m
         output_cost = (
             output_tokens / 1_000_000
-        ) * self.settings.openai_output_cost_per_1m
+        ) * self.settings.groq_output_cost_per_1m
 
         return round(input_cost + output_cost, 8)
 
