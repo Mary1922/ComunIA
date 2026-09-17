@@ -58,9 +58,45 @@ def api_request(
 
     if response.is_error:
         try:
-            detail = response.json().get("detail", response.text)
+            error_data = response.json()
+            detail = error_data.get("detail", response.text)
+
+            # Errores de validación de FastAPI / Pydantic
+            if isinstance(detail, list):
+                messages = []
+
+                field_names = {
+                    "text": "Descripción de la incidencia",
+                    "channel": "Canal",
+                    "community_reference": "Comunidad",
+                    "property_reference": "Vivienda / local / referencia",
+                    "contact_name": "Persona de contacto",
+                    "contact_phone": "Teléfono",
+                }
+
+                for error in detail:
+                    location = error.get("loc", [])
+                    field = location[-1] if location else "campo"
+                    field_name = field_names.get(field, field)
+
+                    error_type = error.get("type", "")
+
+                    if error_type == "string_too_short":
+                        message = f"{field_name}: el campo es obligatorio o demasiado corto."
+
+                    elif error_type == "missing":
+                        message = f"{field_name}: este campo es obligatorio."
+
+                    else:
+                        message = f"{field_name}: {error.get('msg', 'valor no válido')}"
+
+                    messages.append(message)
+
+                detail = "\n".join(messages)
+
         except ValueError:
             detail = response.text
+
         raise RuntimeError(str(detail))
 
     return response.json()
@@ -162,33 +198,66 @@ incident_payload = {
     "contact_phone": contact_phone,
 }
 
+# Comprobación previa de campos obligatorios en el formulario
+required_fields = {
+    "Comunidad": community_reference,
+    "Vivienda / local / referencia": property_reference,
+    "Persona de contacto": contact_name,
+    "Teléfono": contact_phone,
+    "Descripción de la incidencia": text,
+}
+
+missing_fields = [
+    field_name
+    for field_name, value in required_fields.items()
+    if not value.strip()
+]
+
 if analyse:
-    try:
-        result = api_request(
-            "POST",
-            "/triage",
-            {
-                "incident": incident_payload,
-                "provider": provider,
-            },
+    if missing_fields:
+        st.error(
+            "Debes completar los siguientes campos obligatorios: "
+            + ", ".join(missing_fields)
         )
-        st.session_state["last_triage"] = result
-        st.session_state.pop("last_compare", None)
-    except RuntimeError as exc:
-        st.error(str(exc))
+    else:
+        try:
+            result = api_request(
+                "POST",
+                "/triage",
+                {
+                    "incident": incident_payload,
+                    "provider": provider,
+                },
+            )
+
+            st.session_state["last_triage"] = result
+            st.session_state.pop("last_compare", None)
+
+        except RuntimeError as exc:
+            st.error(str(exc))
+
 
 if compare:
-    try:
-        result = api_request(
-            "POST",
-            "/compare",
-            {"incident": incident_payload},
+    if missing_fields:
+        st.error(
+            "Debes completar los siguientes campos obligatorios: "
+            + ", ".join(missing_fields)
         )
-        st.session_state["last_compare"] = result
-        st.session_state.pop("last_triage", None)
-    except RuntimeError as exc:
-        st.error(str(exc))
+    else:
+        try:
+            result = api_request(
+                "POST",
+                "/compare",
+                {
+                    "incident": incident_payload,
+                },
+            )
 
+            st.session_state["last_compare"] = result
+            st.session_state.pop("last_triage", None)
+
+        except RuntimeError as exc:
+            st.error(str(exc))
 
 if "last_triage" in st.session_state:
     result = st.session_state["last_triage"]
