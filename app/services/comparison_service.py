@@ -1,4 +1,4 @@
-"""Comparación de Ollama y OpenAI sobre la misma incidencia."""
+"""Comparación de Ollama y Groq sobre la misma incidencia."""
 
 import asyncio
 
@@ -21,18 +21,18 @@ class ComparisonService:
             request.incident
         )
 
-        ollama_result, openai_result = await asyncio.gather(
+        ollama_result, groq_result = await asyncio.gather(
             self.triage_service.classify_resolved_incident(
                 resolved_incident,
                 LLMProvider.OLLAMA,
             ),
             self.triage_service.classify_resolved_incident(
                 resolved_incident,
-                LLMProvider.OPENAI,
+                LLMProvider.GROQ,
             ),
         )
 
         return ComparisonResponse(
             incident=resolved_incident,
-            results=[ollama_result, openai_result],
+            results=[ollama_result, groq_result],
         )

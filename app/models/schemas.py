@@ -229,10 +229,10 @@ class ComparisonResponse(ComunIABaseModel):
     @model_validator(mode="after")
     def ensure_two_different_providers(self):
         providers = {result.metrics.provider for result in self.results}
-        if providers != {LLMProvider.OLLAMA, LLMProvider.OPENAI}:
+        if providers != {LLMProvider.OLLAMA, LLMProvider.GROQ}:
             raise ValueError(
                 "La comparación debe contener un resultado de Ollama "
-                "y otro de OpenAI."
+                "y otro de Groq."
             )
         return self
 

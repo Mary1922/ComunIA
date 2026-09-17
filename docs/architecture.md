@@ -3,7 +3,7 @@
 ## Objetivo
 
 ComunIA clasifica comunicaciones recibidas por administradores de comunidades
-de propietarios mediante un LLM local (Ollama) o un proveedor externo (OpenAI),
+de propietarios mediante un LLM local (Ollama) o un proveedor externo (Groq),
 manteniendo validación estricta con Pydantic y revisión humana.
 
 ## Flujo principal
@@ -64,3 +64,14 @@ La calidad no se infiere de que dos modelos coincidan. Se utiliza la revisión
 humana como referencia práctica: el dashboard calcula, por proveedor, cuántas
 clasificaciones revisadas fueron aprobadas sin cambios y cuántas necesitaron
 corrección. Esta métrica se interpreta junto con coste y latencia.
+
+
+## Proveedor externo Groq
+
+La integración externa usa la API HTTP compatible con OpenAI de Groq, pero
+ComunIA no depende del SDK de ningún proveedor. `GroqProvider` implementa el
+mismo contrato `BaseLLMProvider` que `OllamaProvider`.
+
+El modelo por defecto es `qwen/qwen3.8-27b`, configurable en `.env`. Se utiliza
+Structured Outputs con JSON Schema estricto y Pydantic vuelve a validar el
+resultado, manteniendo una segunda barrera type-safe independiente del proveedor.

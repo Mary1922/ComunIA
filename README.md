@@ -14,7 +14,7 @@ ComunIA recibe incidencias procedentes de email, WhatsApp o teléfono y genera:
 - justificación auditable;
 - tokens, latencia y coste estimado.
 
-Permite utilizar un modelo local mediante Ollama o un modelo externo de OpenAI,
+Permite utilizar un modelo local mediante Ollama o un modelo externo mediante Groq,
 comparar ambos y someter el resultado a validación humana. El histórico utiliza
 la tasa de aprobación/corrección humana como indicador práctico de calidad por
 proveedor.
@@ -61,10 +61,10 @@ Edita `.env`.
 Para Ollama necesitas tener el servicio local ejecutándose y disponer del modelo
 indicado en `OLLAMA_MODEL`.
 
-Para OpenAI debes añadir una API key válida en:
+Para Groq debes añadir una API key válida en:
 
 ```text
-OPENAI_API_KEY=
+GROQ_API_KEY=
 ```
 
 No subas `.env` a GitHub.
@@ -110,7 +110,7 @@ pytest --cov=app --cov-report=term-missing
 ## Endpoints
 
 - `POST /api/v1/triage`: procesa con un proveedor elegido.
-- `POST /api/v1/compare`: compara Ollama y OpenAI.
+- `POST /api/v1/compare`: compara Ollama y Groq.
 - `GET /api/v1/incidents`: consulta incidencias guardadas.
 - `PATCH /api/v1/incidents/{id}/review`: aprobación/corrección humana.
 - `GET /api/v1/health`: estado del backend.
@@ -138,3 +138,16 @@ Los datos identificativos se validan y almacenan para gestionar la incidencia,
 pero no se envían al LLM para calcular la urgencia.
 
 Consulta `docs/ethics.md`.
+
+
+## Proveedor externo: Groq
+
+El proveedor externo se configura con `GROQ_API_KEY` y utiliza por defecto
+`qwen/qwen3.8-27b`. El modelo admite salida estructurada mediante JSON Schema.
+
+ComunIA calcula `estimated_cost` usando la tarifa pública por tokens para poder
+comparar proveedores en la rúbrica. Si la cuenta está en Groq Free tier, el
+coste realmente facturado puede ser 0 mientras se respeten sus límites.
+
+El modelo externo es configurable desde `.env`, por lo que puede sustituirse
+sin cambiar la lógica de negocio.

@@ -24,7 +24,7 @@ o reducir la gravedad.
 
 ## Proveedor externo
 
-El proveedor externo supone una transferencia del texto de la incidencia fuera
+El proveedor externo Groq supone una transferencia del texto de la incidencia fuera
 del equipo local. Antes de un uso real deben revisarse las obligaciones de
 protección de datos, contratos con proveedores y política de conservación.
 
@@ -37,3 +37,13 @@ cuando el proveedor permite esa opción.
 - Los guardrails cubren únicamente un conjunto limitado de riesgos explícitos.
 - El fuzzy matching debe revisarse al ampliar mucho el catálogo de comunidades.
 - El sistema no sustituye protocolos de emergencia ni decisiones profesionales.
+
+
+## Uso de Groq Free tier
+
+El prototipo prioriza una capa gratuita para evitar coste económico durante el
+desarrollo. Los límites del proveedor deben tratarse como una restricción de
+servicio y los errores 429 se gestionan mediante reintentos con backoff.
+
+Aunque el proveedor sea gratuito durante el prototipo, se mantiene una estimación
+de coste basada en la tarifa pública por tokens para poder evaluar escalabilidad.

@@ -58,7 +58,7 @@ class LLMProvider(str, Enum):
     """Proveedores LLM disponibles."""
 
     OLLAMA = "ollama"
-    OPENAI = "openai"
+    GROQ = "groq"
 
 
 class HumanReviewStatus(str, Enum):

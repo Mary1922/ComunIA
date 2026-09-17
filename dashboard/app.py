@@ -61,10 +61,8 @@ def api_request(
             error_data = response.json()
             detail = error_data.get("detail", response.text)
 
-            # Errores de validación de FastAPI / Pydantic
             if isinstance(detail, list):
                 messages = []
-
                 field_names = {
                     "text": "Descripción de la incidencia",
                     "channel": "Canal",
@@ -78,17 +76,20 @@ def api_request(
                     location = error.get("loc", [])
                     field = location[-1] if location else "campo"
                     field_name = field_names.get(field, field)
-
                     error_type = error.get("type", "")
 
                     if error_type == "string_too_short":
-                        message = f"{field_name}: el campo es obligatorio o demasiado corto."
-
+                        message = (
+                            f"{field_name}: el campo es obligatorio "
+                            "o demasiado corto."
+                        )
                     elif error_type == "missing":
                         message = f"{field_name}: este campo es obligatorio."
-
                     else:
-                        message = f"{field_name}: {error.get('msg', 'valor no válido')}"
+                        message = (
+                            f"{field_name}: "
+                            f"{error.get('msg', 'valor no válido')}"
+                        )
 
                     messages.append(message)
 
@@ -128,6 +129,11 @@ def render_metrics(metrics: dict) -> None:
         f'${metrics["estimated_cost"]:.6f}',
     )
     st.caption(f'Modelo: {metrics["model"]}')
+    if metrics["provider"] == "groq":
+        st.caption(
+            "El coste mostrado usa la tarifa pública de referencia; "
+            "en Groq Free tier el coste facturado puede ser 0."
+        )
 
 
 with st.sidebar:
@@ -166,7 +172,7 @@ with st.form("incident_form"):
         )
         provider = st.selectbox(
             "Proveedor para triaje",
-            ["ollama", "openai"],
+            ["ollama", "groq"],
         )
 
     text = st.text_area(
@@ -184,7 +190,7 @@ with st.form("incident_form"):
         use_container_width=True,
     )
     compare = col_b.form_submit_button(
-        "Comparar Ollama vs OpenAI",
+        "Comparar Ollama vs Groq",
         use_container_width=True,
     )
 
@@ -198,7 +204,7 @@ incident_payload = {
     "contact_phone": contact_phone,
 }
 
-# Comprobación previa de campos obligatorios en el formulario
+# Validación amigable en frontend antes de llamar a FastAPI.
 required_fields = {
     "Comunidad": community_reference,
     "Vivienda / local / referencia": property_reference,
@@ -212,6 +218,7 @@ missing_fields = [
     for field_name, value in required_fields.items()
     if not value.strip()
 ]
+
 
 if analyse:
     if missing_fields:
@@ -229,10 +236,8 @@ if analyse:
                     "provider": provider,
                 },
             )
-
             st.session_state["last_triage"] = result
             st.session_state.pop("last_compare", None)
-
         except RuntimeError as exc:
             st.error(str(exc))
 
@@ -248,16 +253,13 @@ if compare:
             result = api_request(
                 "POST",
                 "/compare",
-                {
-                    "incident": incident_payload,
-                },
+                {"incident": incident_payload},
             )
-
             st.session_state["last_compare"] = result
             st.session_state.pop("last_triage", None)
-
         except RuntimeError as exc:
             st.error(str(exc))
+
 
 if "last_triage" in st.session_state:
     result = st.session_state["last_triage"]
