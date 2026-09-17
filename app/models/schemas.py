@@ -15,6 +15,7 @@ from pydantic import (
 from app.core.enums import (
     Category,
     Channel,
+    ComparisonPreference,
     HumanReviewStatus,
     LLMProvider,
     Priority,
@@ -219,12 +220,53 @@ class TriageResponse(ComunIABaseModel):
     human_classification: TriageClassification | None = None
 
 
+class ProviderQualityAssessment(ComunIABaseModel):
+    """Coincidencia de un proveedor con la referencia humana."""
+
+    provider: LLMProvider
+    category_correct: bool
+    priority_correct: bool
+    exact_match: bool
+    quality_points: int = Field(ge=0, le=2)
+
+
+class ComparisonReviewRequest(ComunIABaseModel):
+    """Referencia humana usada para evaluar una comparación."""
+
+    reference_category: Category
+    reference_priority: Priority
+    preferred_result: ComparisonPreference = ComparisonPreference.TIE
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class ComparisonHumanReview(ComparisonReviewRequest):
+    """Validación humana ya aplicada, con evaluación por proveedor."""
+
+    reviewed_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+    assessments: list[ProviderQualityAssessment] = Field(
+        min_length=2,
+        max_length=2,
+    )
+
+    @model_validator(mode="after")
+    def ensure_two_provider_assessments(self):
+        providers = {item.provider for item in self.assessments}
+        if providers != {LLMProvider.OLLAMA, LLMProvider.GROQ}:
+            raise ValueError(
+                "La evaluación debe contener Ollama y Groq."
+            )
+        return self
+
+
 class ComparisonResponse(ComunIABaseModel):
-    """Respuesta del endpoint /compare."""
+    """Respuesta persistida del endpoint /compare."""
 
     incident_id: UUID = Field(default_factory=uuid4)
     incident: IncidentRequest
     results: list[ProviderTriageResult] = Field(min_length=2, max_length=2)
+    human_review: ComparisonHumanReview | None = None
 
     @model_validator(mode="after")
     def ensure_two_different_providers(self):
@@ -237,8 +279,30 @@ class ComparisonResponse(ComunIABaseModel):
         return self
 
 
+class ProviderQualitySummary(ComunIABaseModel):
+    """Métricas agregadas de calidad y rendimiento de un proveedor."""
+
+    provider: LLMProvider
+    comparisons: int = Field(ge=0)
+    reviewed: int = Field(ge=0)
+    category_accuracy_pct: float | None = Field(default=None, ge=0, le=100)
+    priority_accuracy_pct: float | None = Field(default=None, ge=0, le=100)
+    exact_match_rate_pct: float | None = Field(default=None, ge=0, le=100)
+    preferred_count: int = Field(ge=0)
+    average_latency_ms: float | None = Field(default=None, ge=0)
+    total_estimated_cost: float = Field(ge=0)
+
+
+class ComparisonQualitySummary(ComunIABaseModel):
+    """Resumen acumulado de comparaciones y validaciones humanas."""
+
+    total_comparisons: int = Field(ge=0)
+    reviewed_comparisons: int = Field(ge=0)
+    providers: list[ProviderQualitySummary] = Field(min_length=2, max_length=2)
+
+
 class HumanReviewRequest(ComunIABaseModel):
-    """Validación humana de una clasificación."""
+    """Validación humana de una clasificación individual."""
 
     status: HumanReviewStatus
     classification: TriageClassification | None = None

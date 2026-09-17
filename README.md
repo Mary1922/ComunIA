@@ -110,7 +110,10 @@ pytest --cov=app --cov-report=term-missing
 ## Endpoints
 
 - `POST /api/v1/triage`: procesa con un proveedor elegido.
-- `POST /api/v1/compare`: compara Ollama y Groq.
+- `POST /api/v1/compare`: compara Ollama y Groq y guarda la comparación.
+- `GET /api/v1/comparisons`: consulta comparaciones guardadas.
+- `PATCH /api/v1/comparisons/{id}/review`: registra la referencia humana de calidad.
+- `GET /api/v1/comparisons/quality`: calcula métricas de calidad validadas.
 - `GET /api/v1/incidents`: consulta incidencias guardadas.
 - `PATCH /api/v1/incidents/{id}/review`: aprobación/corrección humana.
 - `GET /api/v1/health`: estado del backend.
@@ -151,3 +154,19 @@ coste realmente facturado puede ser 0 mientras se respeten sus límites.
 
 El modelo externo es configurable desde `.env`, por lo que puede sustituirse
 sin cambiar la lógica de negocio.
+
+## Evaluación humana de calidad
+
+Las comparaciones se persisten en `data/comparisons.json`. La persona supervisora
+indica la categoría y prioridad correctas y puede añadir una valoración cualitativa
+(Ollama, Groq, empate o ninguno). ComunIA no decide automáticamente qué modelo
+es mejor: calcula para cada proveedor el acierto de categoría, el acierto de prioridad
+y la coincidencia exacta frente a la referencia humana.
+
+El dashboard muestra estas tasas agregadas junto con latencia, tokens y coste de
+referencia. De este modo la métrica de calidad no se basa solo en que los dos LLM
+coincidan entre sí.
+
+Los ficheros `data/incidents.json` y `data/comparisons.json` son datos de ejecución
+y están ignorados por Git para no publicar información de contacto. Se incluyen
+ficheros `.example.json` vacíos como plantilla.

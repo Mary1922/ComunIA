@@ -62,8 +62,17 @@ class LLMProvider(str, Enum):
 
 
 class HumanReviewStatus(str, Enum):
-    """Estado de la revisión humana."""
+    """Estado de la revisión humana de un triaje individual."""
 
     PENDING = "pending"
     APPROVED = "approved"
     CORRECTED = "corrected"
+
+
+class ComparisonPreference(str, Enum):
+    """Preferencia cualitativa expresada por la persona supervisora."""
+
+    OLLAMA = "ollama"
+    GROQ = "groq"
+    TIE = "tie"
+    NEITHER = "neither"

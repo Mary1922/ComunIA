@@ -47,3 +47,14 @@ servicio y los errores 429 se gestionan mediante reintentos con backoff.
 
 Aunque el proveedor sea gratuito durante el prototipo, se mantiene una estimación
 de coste basada en la tarifa pública por tokens para poder evaluar escalabilidad.
+
+## Calidad y trazabilidad humana
+
+La comparación entre modelos no se considera una validación por consenso: dos LLM
+pueden coincidir y estar equivocados. La métrica de calidad se calcula únicamente
+cuando una persona supervisora fija una categoría y prioridad de referencia.
+
+Los ficheros de ejecución `data/incidents.json` y `data/comparisons.json` pueden
+contener datos de contacto, por lo que se excluyen del repositorio Git. Para una
+implantación real debe sustituirse el almacenamiento JSON por un sistema con control
+de acceso, cifrado y política explícita de conservación.

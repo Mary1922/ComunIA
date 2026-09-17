@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     max_repair_attempts: int = Field(default=2, ge=0, le=4)
 
     incidents_path: Path = PROJECT_ROOT / "data" / "incidents.json"
+    comparisons_path: Path = PROJECT_ROOT / "data" / "comparisons.json"
     communities_path: Path = PROJECT_ROOT / "data" / "communities.json"
 
 

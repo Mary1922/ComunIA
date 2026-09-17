@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import (
+    ComparisonNotFoundError,
     IncidentNotFoundError,
     InvalidLLMResponseError,
     LLMConfigurationError,
@@ -15,8 +16,10 @@ from app.core.exceptions import (
     PersistenceError,
 )
 from app.models.schemas import (
+    ComparisonQualitySummary,
     ComparisonRequest,
     ComparisonResponse,
+    ComparisonReviewRequest,
     HumanReviewRequest,
     TriageRequest,
     TriageResponse,
@@ -25,6 +28,7 @@ from app.services.community_service import (
     CommunityMatchError,
     CommunityService,
 )
+from app.services.comparison_repository import ComparisonRepository
 from app.services.comparison_service import ComparisonService
 from app.services.incident_repository import IncidentRepository
 from app.services.triage_service import TriageService
@@ -37,6 +41,12 @@ router = APIRouter()
 def get_repository() -> IncidentRepository:
     settings = get_settings()
     return IncidentRepository(settings.incidents_path)
+
+
+@lru_cache
+def get_comparison_repository() -> ComparisonRepository:
+    settings = get_settings()
+    return ComparisonRepository(settings.comparisons_path)
 
 
 @lru_cache
@@ -57,7 +67,10 @@ def get_triage_service() -> TriageService:
 
 @lru_cache
 def get_comparison_service() -> ComparisonService:
-    return ComparisonService(get_triage_service())
+    return ComparisonService(
+        get_triage_service(),
+        get_comparison_repository(),
+    )
 
 
 def _raise_controlled_http_error(exc: Exception) -> None:
@@ -96,7 +109,7 @@ def _raise_controlled_http_error(exc: Exception) -> None:
             detail=str(exc),
         ) from exc
 
-    if isinstance(exc, IncidentNotFoundError):
+    if isinstance(exc, (IncidentNotFoundError, ComparisonNotFoundError)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
@@ -105,7 +118,7 @@ def _raise_controlled_http_error(exc: Exception) -> None:
     if isinstance(exc, PersistenceError):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error interno al acceder al almacenamiento de incidencias.",
+            detail="Error interno al acceder al almacenamiento local.",
         ) from exc
 
     raise exc
@@ -162,6 +175,44 @@ async def review_incident(
 ) -> TriageResponse:
     try:
         return repository.apply_review(incident_id, review)
+    except Exception as exc:
+        _raise_controlled_http_error(exc)
+        raise
+
+
+@router.get("/comparisons", response_model=list[ComparisonResponse])
+async def list_comparisons(
+    repository: ComparisonRepository = Depends(get_comparison_repository),
+) -> list[ComparisonResponse]:
+    try:
+        return repository.list_all()
+    except Exception as exc:
+        _raise_controlled_http_error(exc)
+        raise
+
+
+@router.get("/comparisons/quality", response_model=ComparisonQualitySummary)
+async def comparison_quality(
+    repository: ComparisonRepository = Depends(get_comparison_repository),
+) -> ComparisonQualitySummary:
+    try:
+        return repository.quality_summary()
+    except Exception as exc:
+        _raise_controlled_http_error(exc)
+        raise
+
+
+@router.patch(
+    "/comparisons/{comparison_id}/review",
+    response_model=ComparisonResponse,
+)
+async def review_comparison(
+    comparison_id: UUID,
+    review: ComparisonReviewRequest,
+    repository: ComparisonRepository = Depends(get_comparison_repository),
+) -> ComparisonResponse:
+    try:
+        return repository.apply_review(comparison_id, review)
     except Exception as exc:
         _raise_controlled_http_error(exc)
         raise

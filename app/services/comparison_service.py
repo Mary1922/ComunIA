@@ -4,14 +4,20 @@ import asyncio
 
 from app.core.enums import LLMProvider
 from app.models.schemas import ComparisonRequest, ComparisonResponse
+from app.services.comparison_repository import ComparisonRepository
 from app.services.triage_service import TriageService
 
 
 class ComparisonService:
-    """Ejecuta ambos proveedores sin duplicar los datos de la incidencia."""
+    """Ejecuta ambos proveedores y persiste una única comparación."""
 
-    def __init__(self, triage_service: TriageService) -> None:
+    def __init__(
+        self,
+        triage_service: TriageService,
+        repository: ComparisonRepository,
+    ) -> None:
         self.triage_service = triage_service
+        self.repository = repository
 
     async def compare(
         self,
@@ -32,7 +38,8 @@ class ComparisonService:
             ),
         )
 
-        return ComparisonResponse(
+        response = ComparisonResponse(
             incident=resolved_incident,
             results=[ollama_result, groq_result],
         )
+        return self.repository.save(response)

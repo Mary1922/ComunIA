@@ -75,3 +75,22 @@ mismo contrato `BaseLLMProvider` que `OllamaProvider`.
 El modelo por defecto es `qwen/qwen3.8-27b`, configurable en `.env`. Se utiliza
 Structured Outputs con JSON Schema estricto y Pydantic vuelve a validar el
 resultado, manteniendo una segunda barrera type-safe independiente del proveedor.
+
+## Persistencia y evaluación de comparaciones
+
+`POST /api/v1/compare` ejecuta Ollama y Groq sobre la misma incidencia y persiste
+un único `ComparisonResponse` en `data/comparisons.json`.
+
+La validación humana se realiza con
+`PATCH /api/v1/comparisons/{comparison_id}/review`. La persona supervisora fija
+una categoría y una prioridad de referencia. El backend calcula para cada proveedor:
+
+- acierto de categoría;
+- acierto de prioridad;
+- coincidencia exacta de ambos campos;
+- puntos de coincidencia (0-2).
+
+La preferencia cualitativa del supervisor se almacena por separado, de modo que no
+se confunde una opinión sobre la utilidad del resumen/razonamiento con la exactitud
+de la clasificación. `GET /api/v1/comparisons/quality` agrega las métricas sobre
+comparaciones realmente revisadas por una persona.

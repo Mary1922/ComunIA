@@ -25,3 +25,10 @@ htmlcov/
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Datos runtime con información de contacto / validaciones
+# (si ya estaban trackeados, ejecutar git rm --cached una sola vez)
+data/incidents.json
+data/comparisons.json
+!data/incidents.example.json
+!data/comparisons.example.json
