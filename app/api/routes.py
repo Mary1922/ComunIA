@@ -21,6 +21,7 @@ from app.models.schemas import (
     ComparisonResponse,
     ComparisonReviewRequest,
     HumanReviewRequest,
+    IncidentActionRequest,
     TriageRequest,
     TriageResponse,
 )
@@ -153,12 +154,45 @@ async def compare(
         raise
 
 
+@router.post(
+    "/incidents/{incident_id}/compare",
+    response_model=ComparisonResponse,
+)
+async def compare_existing_incident(
+    incident_id: UUID,
+    incident_repository: IncidentRepository = Depends(get_repository),
+    service: ComparisonService = Depends(get_comparison_service),
+) -> ComparisonResponse:
+    try:
+        incident = incident_repository.get(incident_id)
+        return await service.compare_existing_incident(incident)
+    except Exception as exc:
+        _raise_controlled_http_error(exc)
+        raise
+
+
 @router.get("/incidents", response_model=list[TriageResponse])
 async def list_incidents(
     repository: IncidentRepository = Depends(get_repository),
 ) -> list[TriageResponse]:
     try:
         return repository.list_all()
+    except Exception as exc:
+        _raise_controlled_http_error(exc)
+        raise
+
+
+@router.post(
+    "/incidents/{incident_id}/actions",
+    response_model=TriageResponse,
+)
+async def add_incident_action(
+    incident_id: UUID,
+    action: IncidentActionRequest,
+    repository: IncidentRepository = Depends(get_repository),
+) -> TriageResponse:
+    try:
+        return repository.add_action(incident_id, action)
     except Exception as exc:
         _raise_controlled_http_error(exc)
         raise

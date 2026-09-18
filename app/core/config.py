@@ -6,6 +6,8 @@ from pathlib import Path
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.enums import LLMProvider
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -32,6 +34,8 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr | None = None
     groq_base_url: str = "https://api.groq.com/openai/v1"
     groq_model: str = "qwen/qwen3.8-27b"
+
+    default_triage_provider: LLMProvider = LLMProvider.OLLAMA
 
     # Tarifa publicada de referencia por millón de tokens.
     # El proyecto puede funcionar en Groq Free tier sin coste facturado,

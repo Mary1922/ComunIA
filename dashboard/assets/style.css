@@ -187,11 +187,8 @@ p, label, span, div {
 
 .section-copy p {
   margin: 0;
-  color: #173f30;
-  font-size: 0.92rem;
-  font-weight: 600;
-  line-height: 1.45;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85);
+  color: var(--ink-500);
+  font-size: 0.88rem;
 }
 
 /* ---------- Cards & forms ---------- */
@@ -609,4 +606,572 @@ footer { visibility: hidden; }
 .stDeployButton,
 [data-testid="stAppDeployButton"] {
   display: none !important;
+}
+
+/* ---------- Operational workspace ---------- */
+.section-copy p {
+  margin: 0;
+  color: #173f30;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85);
+}
+
+.operational-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  margin: 1rem 0 0.8rem 0;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.90);
+  border: 1px solid rgba(31,95,70,0.13);
+  box-shadow: var(--shadow-sm);
+}
+
+.operational-reference {
+  color: var(--green-900);
+  font-size: 1.12rem;
+  font-weight: 800;
+}
+
+.operational-address {
+  color: var(--ink-500);
+  font-size: 0.82rem;
+  margin-top: 0.18rem;
+}
+
+.operation-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.42rem 0.72rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.operation-open { background:#fff4d8; color:#725300; border-color:#eed89d; }
+.operation-in_progress { background:#e9f3ff; color:#295b86; border-color:#cbdff3; }
+.operation-scheduled { background:#eeeaff; color:#51418f; border-color:#d7d0f4; }
+.operation-waiting_provider { background:#fff0e8; color:#8b4a26; border-color:#f0d1bf; }
+.operation-resolved { background:#e5f5eb; color:#17643f; border-color:#c5e7d2; }
+.operation-closed { background:#edf1ef; color:#4e5d56; border-color:#d7dfdb; }
+
+.timeline {
+  margin: 0.25rem 0 1rem 0;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 0.8rem;
+  position: relative;
+  padding-bottom: 0.9rem;
+}
+
+.timeline-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 35px;
+  bottom: -2px;
+  width: 2px;
+  background: rgba(46,125,90,0.22);
+}
+
+.timeline-index {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green-700), var(--green-800));
+  color: white;
+  font-size: 0.76rem;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(31,95,70,0.18);
+  z-index: 1;
+}
+
+.timeline-content {
+  padding: 0.82rem 0.95rem;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(31,95,70,0.12);
+  box-shadow: 0 6px 16px rgba(19,61,45,0.05);
+}
+
+.timeline-title {
+  color: var(--green-900);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.timeline-date {
+  color: var(--ink-500);
+  font-size: 0.72rem;
+  margin-top: 0.12rem;
+}
+
+.timeline-description {
+  color: var(--ink-800);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  margin-top: 0.42rem;
+}
+
+.timeline-scheduled {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.28rem 0.5rem;
+  border-radius: 8px;
+  background: var(--green-100);
+  color: var(--green-800);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+[data-testid="stSidebar"] [role="radiogroup"] label {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 10px;
+  padding: 0.42rem 0.55rem;
+  margin-bottom: 0.3rem;
+}
+
+/* ========================================================================== */
+/* FINAL UX POLISH — legibilidad, jerarquía y reducción de ruido visual       */
+/* ========================================================================== */
+
+/* Mantener la fotografía como identidad, pero convertir cada zona de trabajo
+   en una superficie estable y legible. */
+:root {
+  --surface: rgba(255, 255, 255, 0.965);
+  --surface-soft: rgba(248, 252, 249, 0.945);
+  --work-border: rgba(24, 82, 59, 0.16);
+  --work-shadow: 0 10px 28px rgba(18, 60, 44, 0.08);
+}
+
+/* Texto secundario: más contraste sobre cualquier parte de la fotografía. */
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p,
+[data-testid="stCaptionContainer"] span {
+  color: #42584e !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+}
+
+/* Cabeceras de sección: una base muy ligera evita texto flotando sobre foto. */
+.section-heading {
+  align-items: center;
+  padding: 0.72rem 0.9rem;
+  margin: 1.55rem 0 0.72rem 0;
+  border-radius: 16px;
+  background: rgba(248, 252, 249, 0.90);
+  border: 1px solid rgba(31, 95, 70, 0.11);
+  box-shadow: 0 5px 16px rgba(18, 60, 44, 0.05);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.section-icon {
+  width: 38px;
+  height: 38px;
+  flex-basis: 38px;
+  border-radius: 11px;
+}
+
+.section-copy h2 {
+  font-size: 1.34rem !important;
+  margin-bottom: 0.08rem !important;
+}
+
+.section-copy p {
+  color: #315044 !important;
+  font-size: 0.82rem !important;
+  font-weight: 650 !important;
+  line-height: 1.4 !important;
+  text-shadow: none !important;
+}
+
+/* Formularios y contenedores funcionales casi opacos: la foto queda en el
+   contexto visual, no compite con la información. */
+[data-testid="stForm"],
+div[data-testid="stVerticalBlockBorderWrapper"] {
+  background: rgba(255, 255, 255, 0.965) !important;
+  border-color: var(--work-border) !important;
+  box-shadow: var(--work-shadow) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Expanders: más limpios y legibles sin parecer tarjetas pesadas. */
+[data-testid="stExpander"] {
+  background: rgba(253, 254, 253, 0.965) !important;
+  border-color: rgba(31, 95, 70, 0.14) !important;
+  box-shadow: 0 5px 16px rgba(18, 60, 44, 0.045);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+[data-testid="stExpander"] summary {
+  color: #203b30 !important;
+  font-weight: 750 !important;
+}
+
+/* Mensajes: más contraste y menos transparencia. */
+[data-testid="stAlert"] {
+  opacity: 1 !important;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+[data-testid="stAlert"] p {
+  color: #244338 !important;
+  font-weight: 650 !important;
+}
+
+/* Métricas: más compactas, etiquetas completas y sin truncados. */
+[data-testid="stMetric"] {
+  min-height: 88px !important;
+  padding: 0.72rem 0.8rem !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.985), rgba(246,250,247,0.97)) !important;
+  border-color: rgba(31, 95, 70, 0.14) !important;
+  box-shadow: 0 5px 15px rgba(18, 60, 44, 0.05) !important;
+}
+
+[data-testid="stMetricLabel"],
+[data-testid="stMetricLabel"] p,
+[data-testid="stMetricLabel"] div {
+  color: #50655c !important;
+  font-size: 0.69rem !important;
+  line-height: 1.25 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: normal !important;
+}
+
+[data-testid="stMetricValue"] {
+  font-size: clamp(1.02rem, 1.55vw, 1.42rem) !important;
+}
+
+/* Tablas: se perciben como una herramienta de trabajo, no como contenido
+   flotando sobre el fondo. */
+[data-testid="stDataFrame"] {
+  background: rgba(255, 255, 255, 0.985) !important;
+  border-color: rgba(31, 95, 70, 0.16) !important;
+  box-shadow: 0 6px 18px rgba(18, 60, 44, 0.055) !important;
+}
+
+/* Tarjetas propias de clasificación/resumen/seguimiento. */
+.classification-card,
+.summary-card,
+.operational-detail-header,
+.timeline-content {
+  background: rgba(255, 255, 255, 0.965) !important;
+  border-color: rgba(31, 95, 70, 0.15) !important;
+}
+
+.summary-card {
+  background: linear-gradient(135deg, rgba(236,247,241,0.985), rgba(255,255,255,0.975)) !important;
+}
+
+.timeline-date,
+.operational-address {
+  color: #53685f !important;
+}
+
+/* Divisores más discretos: separan sin añadir ruido. */
+[data-testid="stDivider"] hr,
+hr {
+  border-color: rgba(31, 95, 70, 0.12) !important;
+  margin-top: 1.25rem !important;
+  margin-bottom: 1.25rem !important;
+}
+
+/* Selectores y controles con fondo sólido, especialmente en las vistas de
+   bandeja e históricos. */
+[data-baseweb="select"] > div,
+[data-baseweb="input"] > div,
+[data-baseweb="textarea"] > div,
+.stTextInput input,
+.stTextArea textarea {
+  background: rgba(253, 254, 253, 0.99) !important;
+}
+
+/* Aumenta la legibilidad del contenido Markdown ordinario sin convertir todo
+   en negro duro. */
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li {
+  color: #263d33;
+}
+
+/* La imagen debe seguir presente, pero el área central no necesita una capa
+   extra agresiva. En móvil se refuerza levemente para conservar lectura. */
+@media (max-width: 900px) {
+  .section-heading {
+    background: rgba(250, 253, 251, 0.96);
+  }
+
+  [data-testid="stMetric"] {
+    min-height: 82px !important;
+  }
+}
+
+/* ========================================================================== */
+/* FINAL ACCESSIBILITY FIX — hero subtitle + active sidebar work mode          */
+/* ========================================================================== */
+
+/* El subtítulo del hero debe conservar contraste alto independientemente de
+   reglas globales de Streamlit o del orden de inyección del CSS. */
+[data-testid="stAppViewContainer"] section.comunia-hero p.hero-subtitle,
+section.comunia-hero p.hero-subtitle,
+.comunia-hero .hero-subtitle {
+  color: rgba(255, 255, 255, 0.96) !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.34) !important;
+}
+
+/* Selector de modo de trabajo: aspecto de botón y estado activo inequívoco. */
+[data-testid="stSidebar"] [role="radiogroup"] {
+  display: grid;
+  gap: 0.38rem;
+  margin: 0.18rem 0 0.8rem 0;
+}
+
+[data-testid="stSidebar"] [role="radiogroup"] label {
+  width: 100%;
+  min-height: 44px;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0.58rem 0.68rem !important;
+  margin: 0 !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+  transition: background 160ms ease, border-color 160ms ease,
+              transform 160ms ease, box-shadow 160ms ease !important;
+  cursor: pointer;
+}
+
+[data-testid="stSidebar"] [role="radiogroup"] label:hover {
+  background: rgba(255, 255, 255, 0.13) !important;
+  border-color: rgba(223, 242, 231, 0.36) !important;
+  transform: translateY(-1px);
+}
+
+/* :has() está soportado por el Chrome/Edge actual usado por Streamlit. */
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input[type="radio"]:checked) {
+  background: linear-gradient(135deg, #dff2e7 0%, #b9e9cc 100%) !important;
+  border: 1px solid #95d5b2 !important;
+  box-shadow: 0 8px 20px rgba(5, 35, 24, 0.24) !important;
+  transform: translateX(3px);
+}
+
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input[type="radio"]:checked),
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input[type="radio"]:checked) * {
+  color: #123c2c !important;
+  font-weight: 800 !important;
+}
+
+[data-testid="stSidebar"] [role="radiogroup"] input[type="radio"] {
+  accent-color: #2e7d5a;
+}
+
+/* ========================================================================== */
+/* COMPACT HERO — reduce la cabecera a ~2/3 de su altura visual anterior      */
+/* ========================================================================== */
+.comunia-hero {
+  padding: 0.82rem 1.45rem 0.88rem 1.45rem !important;
+  margin-bottom: 0.8rem !important;
+}
+
+.comunia-hero .hero-kicker {
+  padding: 0.24rem 0.56rem !important;
+  margin-bottom: 0.34rem !important;
+  font-size: 0.68rem !important;
+}
+
+.comunia-hero .hero-title {
+  font-size: clamp(1.8rem, 2.6vw, 2.45rem) !important;
+  line-height: 1 !important;
+}
+
+[data-testid="stAppViewContainer"] section.comunia-hero p.hero-subtitle,
+section.comunia-hero p.hero-subtitle,
+.comunia-hero .hero-subtitle {
+  margin: 0.34rem 0 0.52rem 0 !important;
+  font-size: 0.82rem !important;
+  line-height: 1.35 !important;
+  color: rgba(255, 255, 255, 0.97) !important;
+  font-weight: 650 !important;
+}
+
+.comunia-hero .hero-tags {
+  gap: 0.3rem !important;
+}
+
+.comunia-hero .hero-tag {
+  padding: 0.24rem 0.5rem !important;
+  font-size: 0.7rem !important;
+}
+
+@media (max-width: 900px) {
+  .comunia-hero {
+    padding: 0.78rem 0.95rem 0.82rem 0.95rem !important;
+  }
+}
+
+/* ========================================================================== */
+/* FINAL DELIVERY PATCH — contraste, tarjetas blancas y consistencia visual   */
+/* ========================================================================== */
+
+/* Nota contextual (p. ej. comunidad identificada) con contraste estable. */
+.context-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.1rem 0 0.65rem 0;
+  padding: 0.42rem 0.72rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(31, 95, 70, 0.14);
+  color: #1f4636 !important;
+  font-size: 0.86rem;
+  font-weight: 750;
+  box-shadow: 0 4px 12px rgba(18, 60, 44, 0.05);
+}
+
+/* Copia secundaria dentro de las tarjetas de proveedor. */
+.supporting-copy {
+  margin: -0.1rem 0 0.65rem 0;
+  color: #2b4a3d !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* Pie de métricas de calidad: no debe perderse sobre la fotografía. */
+.quality-footnote {
+  margin-top: 0.72rem;
+  padding: 0.55rem 0.68rem;
+  border-radius: 10px;
+  background: #f4faf6;
+  border: 1px solid rgba(31, 95, 70, 0.12);
+  color: #28483a !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+/* Las tarjetas técnicas que contienen el marcador son superficies de trabajo
+   blancas. El fondo fotográfico queda como contexto, no como soporte de texto. */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.opaque-work-card-marker) {
+  background: #ffffff !important;
+  border: 1px solid rgba(31, 95, 70, 0.16) !important;
+  box-shadow: 0 10px 26px rgba(18, 60, 44, 0.08) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.opaque-work-card-marker)
+[data-testid="stMarkdownContainer"] p,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.opaque-work-card-marker)
+[data-testid="stMarkdownContainer"] span,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.opaque-work-card-marker)
+[data-testid="stCaptionContainer"],
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.opaque-work-card-marker)
+[data-testid="stCaptionContainer"] p {
+  color: #263f34 !important;
+  opacity: 1 !important;
+}
+
+.opaque-work-card-marker {
+  display: none;
+}
+
+.comparison-summary-title {
+  margin: 0.05rem 0 0.55rem 0;
+  color: #173f30;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+/* Dataframes sobre fondo blanco sólido, especialmente el resumen comparativo. */
+[data-testid="stDataFrame"],
+[data-testid="stDataFrame"] > div {
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+/* Los captions siguen siendo secundarios, pero nunca de bajo contraste. */
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p,
+[data-testid="stCaptionContainer"] span {
+  color: #334f43 !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+
+/* ========================================================================== */
+/* DEMO WHATSAPP — previsualización segura, sin envío real                    */
+/* ========================================================================== */
+.whatsapp-demo-card {
+  margin: 0.6rem 0 0.85rem 0;
+  padding: 1rem 1.05rem;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(37, 211, 102, 0.28);
+  box-shadow: 0 10px 24px rgba(18, 60, 44, 0.08);
+}
+
+.whatsapp-demo-heading {
+  color: #175f3f;
+  font-size: 1rem;
+  font-weight: 850;
+  margin-bottom: 0.28rem;
+}
+
+.whatsapp-demo-meta {
+  color: #476258;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.whatsapp-demo-message {
+  padding: 0.85rem 0.95rem;
+  border-radius: 12px;
+  background: #eefaf2;
+  color: #193f30;
+  line-height: 1.55;
+  font-size: 0.9rem;
+  border-left: 4px solid #25d366;
+}
+
+.whatsapp-demo-badge {
+  display: inline-flex;
+  margin-top: 0.72rem;
+  padding: 0.28rem 0.52rem;
+  border-radius: 999px;
+  background: #fff6dc;
+  color: #70510c;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+
+/* ---------- Uniform spacing for supervision expanders ---------- */
+/* Mantiene la misma separación entre Nueva incidencia, Histórico de
+   incidencias e Histórico de comparaciones y calidad. */
+[data-testid="stMain"] [data-testid="stExpander"] {
+  margin-top: 0 !important;
+  margin-bottom: 1rem !important;
 }

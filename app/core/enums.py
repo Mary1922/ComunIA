@@ -69,6 +69,29 @@ class HumanReviewStatus(str, Enum):
     CORRECTED = "corrected"
 
 
+class IncidentOperationalStatus(str, Enum):
+    """Estado operativo de una incidencia durante su resolución."""
+
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    SCHEDULED = "scheduled"
+    WAITING_PROVIDER = "waiting_provider"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
+
+
+class IncidentActionType(str, Enum):
+    """Tipos de hitos que pueden registrarse en el seguimiento."""
+
+    REGISTRATION = "registration"
+    PROVIDER_CONTACT = "provider_contact"
+    APPOINTMENT = "appointment"
+    PROVIDER_VISIT = "provider_visit"
+    WAITING_MATERIAL = "waiting_material"
+    INTERNAL_NOTE = "internal_note"
+    RESOLUTION = "resolution"
+
+
 class ComparisonPreference(str, Enum):
     """Preferencia cualitativa expresada por la persona supervisora."""
 

@@ -1,7 +1,6 @@
 """Modelos Pydantic de entrada y salida de ComunIA."""
 
 from datetime import datetime, timezone
-import re
 from uuid import UUID, uuid4
 
 from pydantic import (
@@ -17,10 +16,13 @@ from app.core.enums import (
     Channel,
     ComparisonPreference,
     HumanReviewStatus,
+    IncidentActionType,
+    IncidentOperationalStatus,
     LLMProvider,
     Priority,
     ResponsibleArea,
 )
+from app.core.validators import normalize_spanish_phone
 
 
 CATEGORY_AREA_MAP: dict[Category, ResponsibleArea] = {
@@ -103,8 +105,8 @@ class IncidentRequest(ComunIABaseModel):
     )
     contact_phone: str = Field(
         min_length=9,
-        max_length=25,
-        description="Teléfono de contacto.",
+        max_length=9,
+        description="Teléfono español de contacto, exactamente 9 cifras.",
     )
     received_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -114,17 +116,9 @@ class IncidentRequest(ComunIABaseModel):
     @field_validator("contact_phone")
     @classmethod
     def validate_and_normalize_phone(cls, value: str) -> str:
-        """Acepta formatos habituales y almacena un teléfono normalizado."""
+        """Exige el formato nacional de 9 cifras definido por ComunIA."""
 
-        normalized = re.sub(r"[\s().-]", "", value)
-
-        if not re.fullmatch(r"\+?\d{9,15}", normalized):
-            raise ValueError(
-                "El teléfono debe contener entre 9 y 15 dígitos "
-                "y puede comenzar por '+'."
-            )
-
-        return normalized
+        return normalize_spanish_phone(value)
 
     @field_validator("received_at")
     @classmethod
@@ -209,6 +203,47 @@ class ProviderTriageResult(ComunIABaseModel):
     metrics: ProviderMetrics
 
 
+class IncidentAction(ComunIABaseModel):
+    """Hito cronológico del seguimiento operativo de una incidencia."""
+
+    action_id: UUID = Field(default_factory=uuid4)
+    action_type: IncidentActionType
+    description: str = Field(min_length=3, max_length=1500)
+    actor: str = Field(default="Administración", min_length=2, max_length=120)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+    scheduled_for: datetime | None = None
+
+    @field_validator("created_at", "scheduled_for")
+    @classmethod
+    def ensure_action_timezone(cls, value: datetime | None):
+        if value is None:
+            return value
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
+
+class IncidentActionRequest(ComunIABaseModel):
+    """Nueva actuación registrada por el equipo de gestión."""
+
+    action_type: IncidentActionType
+    description: str = Field(min_length=3, max_length=1500)
+    actor: str = Field(default="Administración", min_length=2, max_length=120)
+    scheduled_for: datetime | None = None
+    new_status: IncidentOperationalStatus | None = None
+
+    @field_validator("scheduled_for")
+    @classmethod
+    def ensure_schedule_timezone(cls, value: datetime | None):
+        if value is None:
+            return value
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
+
 class TriageResponse(ComunIABaseModel):
     """Respuesta completa del endpoint /triage."""
 
@@ -218,6 +253,8 @@ class TriageResponse(ComunIABaseModel):
     metrics: ProviderMetrics
     human_status: HumanReviewStatus = HumanReviewStatus.PENDING
     human_classification: TriageClassification | None = None
+    operational_status: IncidentOperationalStatus = IncidentOperationalStatus.OPEN
+    actions: list[IncidentAction] = Field(default_factory=list)
 
 
 class ProviderQualityAssessment(ComunIABaseModel):
@@ -264,6 +301,7 @@ class ComparisonResponse(ComunIABaseModel):
     """Respuesta persistida del endpoint /compare."""
 
     incident_id: UUID = Field(default_factory=uuid4)
+    source_incident_id: UUID | None = None
     incident: IncidentRequest
     results: list[ProviderTriageResult] = Field(min_length=2, max_length=2)
     human_review: ComparisonHumanReview | None = None

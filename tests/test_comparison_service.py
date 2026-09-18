@@ -7,6 +7,7 @@ from app.models.schemas import (
     ProviderMetrics,
     ProviderTriageResult,
     TriageClassification,
+    TriageResponse,
 )
 from app.services.comparison_repository import ComparisonRepository
 from app.services.comparison_service import ComparisonService
@@ -52,3 +53,39 @@ async def test_compare_persists_both_provider_results(tmp_path, sample_incident)
         "ollama",
         "groq",
     }
+
+
+@pytest.mark.asyncio
+async def test_compare_existing_incident_is_idempotent(
+    tmp_path,
+    sample_incident,
+):
+    repository = ComparisonRepository(tmp_path / "comparisons.json")
+    service = ComparisonService(FakeTriageService(), repository)
+    incident = TriageResponse(
+        incident=sample_incident,
+        classification=TriageClassification(
+            category="portero_automatico",
+            priority="medium",
+            summary="Portero automático averiado necesita revisión técnica",
+            department="mantenimiento",
+            reasoning="Requiere reparación sin riesgo inmediato.",
+        ),
+        metrics=ProviderMetrics(
+            provider="ollama",
+            model="gemma3:4b",
+            input_tokens=10,
+            output_tokens=10,
+            latency_ms=100,
+            estimated_cost=0,
+        ),
+    )
+
+    first = await service.compare_existing_incident(incident)
+    second = await service.compare_existing_incident(incident)
+
+    stored = repository.list_all()
+    assert len(stored) == 1
+    assert first.incident_id == second.incident_id
+    assert first.source_incident_id == incident.incident_id
+    assert stored[0].source_incident_id == incident.incident_id

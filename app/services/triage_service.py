@@ -3,12 +3,13 @@
 from collections.abc import Callable
 
 from app.core.config import Settings
-from app.core.enums import LLMProvider
+from app.core.enums import IncidentActionType, LLMProvider
 from app.core.exceptions import InvalidLLMResponseError
 from app.guardrails.priority_guardrail import apply_priority_guardrail
 from app.llm.base import BaseLLMProvider
 from app.llm.factory import create_provider
 from app.models.schemas import (
+    IncidentAction,
     IncidentRequest,
     ProviderTriageResult,
     TriageRequest,
@@ -148,6 +149,14 @@ class TriageService:
             incident=resolved_incident,
             classification=result.classification,
             metrics=result.metrics,
+            actions=[
+                IncidentAction(
+                    action_type=IncidentActionType.REGISTRATION,
+                    description="Incidencia registrada en ComunIA.",
+                    actor="Sistema",
+                    created_at=resolved_incident.received_at,
+                )
+            ],
         )
 
         return self.repository.save(response)
