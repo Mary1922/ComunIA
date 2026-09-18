@@ -87,3 +87,5 @@ async def test_service_repairs_invalid_llm_response(
     assert response.classification.priority.value == "medium"
     assert response.metrics.input_tokens == 20
     assert response.metrics.output_tokens == 20
+    assert response.actions[0].action_type.value == "registration"
+    assert response.actions[0].created_at == response.incident.received_at

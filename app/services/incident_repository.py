@@ -6,7 +6,12 @@ from threading import Lock
 from uuid import UUID
 
 from app.core.exceptions import IncidentNotFoundError, PersistenceError
-from app.models.schemas import HumanReviewRequest, TriageResponse
+from app.models.schemas import (
+    HumanReviewRequest,
+    IncidentAction,
+    IncidentActionRequest,
+    TriageResponse,
+)
 
 
 class IncidentRepository:
@@ -68,6 +73,20 @@ class IncidentRepository:
                 "Existe una incidencia almacenada con formato inválido."
             ) from exc
 
+    def get(self, incident_id: UUID) -> TriageResponse:
+        """Devuelve una incidencia por su identificador técnico."""
+
+        with self._lock:
+            data = self._read_raw()
+
+        for item in data:
+            if item.get("incident_id") == str(incident_id):
+                return TriageResponse.model_validate(item)
+
+        raise IncidentNotFoundError(
+            f"No existe la incidencia {incident_id}."
+        )
+
     def apply_review(
         self,
         incident_id: UUID,
@@ -94,3 +113,40 @@ class IncidentRepository:
         raise IncidentNotFoundError(
             f"No existe la incidencia {incident_id}."
         )
+
+    def add_action(
+        self,
+        incident_id: UUID,
+        action_request: IncidentActionRequest,
+    ) -> TriageResponse:
+        """Añade un hito al seguimiento y opcionalmente cambia su estado."""
+
+        with self._lock:
+            data = self._read_raw()
+
+            for index, item in enumerate(data):
+                if item.get("incident_id") != str(incident_id):
+                    continue
+
+                current = TriageResponse.model_validate(item)
+                action = IncidentAction(
+                    action_type=action_request.action_type,
+                    description=action_request.description,
+                    actor=action_request.actor,
+                    scheduled_for=action_request.scheduled_for,
+                )
+                updated_actions = [*current.actions, action]
+                update_data = {"actions": updated_actions}
+
+                if action_request.new_status is not None:
+                    update_data["operational_status"] = action_request.new_status
+
+                updated = current.model_copy(update=update_data)
+                data[index] = updated.model_dump(mode="json")
+                self._write_raw(data)
+                return updated
+
+        raise IncidentNotFoundError(
+            f"No existe la incidencia {incident_id}."
+        )
+

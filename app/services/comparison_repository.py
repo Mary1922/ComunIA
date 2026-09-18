@@ -77,6 +77,17 @@ class ComparisonRepository:
                 "Existe una comparación almacenada con formato inválido."
             ) from exc
 
+    def find_by_source_incident_id(
+        self,
+        incident_id: UUID,
+    ) -> ComparisonResponse | None:
+        """Busca la comparación vinculada a una incidencia ya registrada."""
+
+        for comparison in self.list_all():
+            if comparison.source_incident_id == incident_id:
+                return comparison
+        return None
+
     @staticmethod
     def _assessment_for(
         response: ComparisonResponse,

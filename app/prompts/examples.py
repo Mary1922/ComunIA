@@ -9,8 +9,9 @@ FEW_SHOT_EXAMPLES = [
             "summary": "Persona atrapada dentro del ascensor requiere actuación inmediata",
             "department": "mantenimiento",
             "reasoning": (
-                "Existe riesgo directo para una persona y se requiere "
-                "intervención inmediata."
+                "Observación: hay una persona atrapada. "
+                "Acción: requiere intervención inmediata. "
+                "Resultado: ascensores con prioridad critical."
             ),
         },
     },
@@ -22,8 +23,9 @@ FEW_SHOT_EXAMPLES = [
             "summary": "Entrada activa de agua amenaza el garaje comunitario",
             "department": "mantenimiento",
             "reasoning": (
-                "La entrada de agua está activa y puede provocar daños "
-                "materiales relevantes."
+                "Observación: existe una entrada activa de agua. "
+                "Acción: requiere intervención de mantenimiento. "
+                "Resultado: danos_agua con prioridad high."
             ),
         },
     },
@@ -35,8 +37,9 @@ FEW_SHOT_EXAMPLES = [
             "summary": "Portero automático averiado desde ayer necesita revisión técnica",
             "department": "mantenimiento",
             "reasoning": (
-                "La avería requiere reparación pero no describe un riesgo "
-                "inmediato para personas."
+                "Observación: el portero automático está averiado. "
+                "Acción: requiere reparación programable. "
+                "Resultado: portero_automatico con prioridad medium."
             ),
         },
     },
@@ -48,7 +51,9 @@ FEW_SHOT_EXAMPLES = [
             "summary": "Propietario solicita copia del último recibo comunitario",
             "department": "gestion_comunidad",
             "reasoning": (
-                "Se trata de una gestión documental sin riesgo ni avería."
+                "Observación: se solicita una copia de un recibo. "
+                "Acción: requiere gestión administrativa. "
+                "Resultado: contabilidad con prioridad low."
             ),
         },
     },

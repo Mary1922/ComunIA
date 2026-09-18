@@ -79,11 +79,16 @@ REGLAS OBLIGATORIAS:
 8. Respeta exactamente la relación categoría-área indicada arriba.
 9. Devuelve únicamente el objeto estructurado solicitado.
 
-RAZONAMIENTO AUDITABLE:
-Antes de clasificar, revisa internamente la observación, el riesgo y la acción
-necesaria. En el campo "reasoning" devuelve únicamente una justificación breve
-basada en hechos observables de la incidencia; no incluyas deliberación privada
-paso a paso.
+FRAMEWORK REACT AUDITABLE:
+Usa un ciclo ReAct acotado para justificar la decisión sin exponer deliberación
+privada. En el campo "reasoning" devuelve exactamente tres bloques breves,
+basados únicamente en hechos observables:
+- Observación: qué hecho relevante aparece en la incidencia.
+- Acción: qué tipo de actuación requiere ese hecho.
+- Resultado: por qué esos hechos sostienen la categoría y prioridad elegidas.
+
+No escribas una cadena de pensamiento privada ni pasos mentales internos. El
+objetivo es una trazabilidad breve, verificable y útil para la persona supervisora.
 
 EJEMPLOS FEW-SHOT:
 {examples}

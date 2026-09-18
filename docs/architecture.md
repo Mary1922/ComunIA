@@ -94,3 +94,37 @@ La preferencia cualitativa del supervisor se almacena por separado, de modo que 
 se confunde una opinión sobre la utilidad del resumen/razonamiento con la exactitud
 de la clasificación. `GET /api/v1/comparisons/quality` agrega las métricas sobre
 comparaciones realmente revisadas por una persona.
+
+## ReAct auditable y razonamiento seguro
+
+El prompt utiliza una adaptación auditable de ReAct. El modelo no expone una
+cadena de pensamiento privada. En su lugar, el campo `reasoning` resume tres
+componentes verificables y breves:
+
+1. `Observación`: hechos explícitos presentes en la incidencia.
+2. `Acción`: tipo de actuación que esos hechos requieren.
+3. `Resultado`: justificación de la categoría y prioridad devueltas.
+
+Este formato aporta trazabilidad para la revisión humana sin convertir el
+razonamiento interno del modelo en parte del contrato público de la aplicación.
+
+## Capa operativa de gestión
+
+ComunIA separa dos vistas del mismo producto:
+
+- **Gestión de incidencias**: vista por defecto para trabajo diario. Oculta tokens,
+  costes y comparación de proveedores y prioriza cartera abierta, filtros,
+  estados operativos y seguimiento cronológico.
+- **Supervisión IA**: vista técnica para validar clasificaciones, comparar Ollama
+  y Groq y revisar métricas de calidad, latencia y coste.
+
+El estado de revisión humana (`pending`, `approved`, `corrected`) se mantiene
+separado del estado operativo de resolución (`open`, `in_progress`, `scheduled`,
+`waiting_provider`, `resolved`, `closed`). De esta forma una incidencia puede,
+por ejemplo, estar aprobada por la persona supervisora y continuar en gestión
+hasta que el proveedor complete la reparación.
+
+Cada incidencia admite una lista de actuaciones cronológicas. El endpoint
+`POST /api/v1/incidents/{incident_id}/actions` añade hitos como avisos a
+proveedores, citas, visitas, esperas de material, notas y resolución. Cada hito
+puede actualizar el estado operativo y conservar una fecha futura programada.

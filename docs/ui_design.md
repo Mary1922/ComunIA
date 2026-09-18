@@ -55,3 +55,22 @@ El histórico de comparaciones aplica el mismo criterio de legibilidad: el UUID 
 La cabecera principal se mantiene como elemento de identidad, pero con una altura reducida para que el formulario de nueva incidencia aparezca antes en pantalla. El encabezado nativo de Streamlit se deja visualmente transparente para evitar que una franja translúcida se superponga al contenido durante el desplazamiento.
 
 Las tarjetas de prioridad, categoría y área usan un componente compacto propio y mantienen una altura visual equivalente al resumen ejecutivo, mejorando la densidad de información sin sacrificar legibilidad.
+
+## Pulido UX final
+
+La interfaz mantiene la fotografía residencial como elemento de identidad, pero las áreas de trabajo utilizan superficies casi opacas para priorizar la lectura. La vista operativa conserva todas las acciones necesarias para administración (registro, filtros, consulta, seguimiento cronológico y cambio de estado), mientras que la información técnica se concentra en `Supervisión IA`.
+
+En la vista de supervisión se redujo el ruido visual mediante jerarquía de información: métricas principales visibles, explicaciones extensas bajo expanders y tablas con encabezados orientados a usuario. No se elimina ninguna funcionalidad; se reduce únicamente información redundante o se reubica como ayuda contextual.
+
+## Pulido UX final
+
+La última iteración refuerza la legibilidad sin eliminar funciones. La fotografía se mantiene como identidad visual, mientras que las zonas de trabajo usan superficies casi opacas, mayor contraste tipográfico y sombras suaves. Los textos metodológicos largos se desplazan a ayudas colapsables cuando no son necesarios para la operación diaria. En la vista de supervisión se mantiene toda la información técnica, pero con una jerarquía visual más clara y tablas con encabezados orientados a usuario.
+
+## Ajustes UX operativos finales
+
+- La cabecera de producto se compacta aproximadamente a dos tercios de su altura anterior para priorizar la zona de trabajo.
+- El teléfono se valida en frontend y backend con el formato nacional de 9 cifras.
+- La bandeja operativa permite filtrar por estado, prioridad, categoría, comunidad, fecha y persona de contacto.
+- Los históricos de supervisión incorporan filtros por fecha y proveedor antes de seleccionar un registro.
+- El formulario de actuaciones confirma el guardado mediante mensaje visible y `toast`, y se reinicia tras una operación correcta.
+- La cronología se renderiza como un único bloque HTML para evitar que etiquetas de cierre aparezcan como texto.
